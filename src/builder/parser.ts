@@ -16,23 +16,34 @@ export function directRows(table: Element): Element[] {
   return out
 }
 
-export function parseEmailHtml(html: string): EmailDoc | null {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  const content = doc.querySelector('table.et-content') as HTMLTableElement | null
+export interface ParseResult {
+  doc: EmailDoc
+  unmatched: number
+}
+
+export function parseEmailHtmlDetailed(html: string): ParseResult | null {
+  const dom = new DOMParser().parseFromString(html, 'text/html')
+  const content = dom.querySelector('table.et-content') as HTMLTableElement | null
   if (!content) return null
 
-  const settings = extractSettings(doc, content)
+  const settings = extractSettings(dom, content)
   const ctx = makeParseCtx()
   const blocks: Block[] = []
+  let unmatched = 0
   for (const row of directRows(content)) {
     const block = ctx.parseRow(row)
     if (block !== null) {
       blocks.push(block)
     } else {
       blocks.push({ id: uid(), type: 'raw', props: { html: row.innerHTML.trim() } })
+      unmatched++
     }
   }
-  return { settings, blocks }
+  return { doc: { settings, blocks }, unmatched }
+}
+
+export function parseEmailHtml(html: string): EmailDoc | null {
+  return parseEmailHtmlDetailed(html)?.doc ?? null
 }
 
 function extractSettings(doc: Document, content: HTMLElement): EmailDocSettings {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Redo2, Save, Snowflake, Undo2 } from 'lucide-react'
+import { ArrowLeft, Code2, Download, Eye, History, LayoutTemplate, Redo2, Save, Snowflake, Undo2 } from 'lucide-react'
 import { api } from '../api/client'
 import { navigate } from '../router'
 import { emptyDoc, type EmailDoc } from '../builder/model'
@@ -7,8 +7,20 @@ import { renderEmail } from '../builder/render'
 import { inlineCss } from '../builder/inliner'
 import { useEditor } from '../stores/editor'
 import { Canvas, type ActiveDrag } from '../components/builder/Canvas'
+import { CodePanel } from '../components/builder/CodePanel'
+import { PreviewPane } from '../components/builder/PreviewPane'
 import { PropertiesPanel } from '../components/builder/PropertiesPanel'
+import { VersionsDialog } from '../components/builder/VersionsDialog'
+import { ExportDialog } from '../components/builder/ExportDialog'
 import type { DropTarget } from '../stores/editor'
+
+type Mode = 'design' | 'code' | 'preview'
+
+const MODES: Array<{ id: Mode; label: string; icon: typeof Code2 }> = [
+  { id: 'design', label: 'Design', icon: LayoutTemplate },
+  { id: 'code', label: 'Code', icon: Code2 },
+  { id: 'preview', label: 'Preview', icon: Eye },
+]
 
 interface TemplateData {
   id: number
@@ -36,6 +48,9 @@ export default function EditorPage({ id }: { id: number }) {
   const canRedo = useEditor((s) => s.future.length > 0)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [mode, setMode] = useState<Mode>('design')
+  const [showVersions, setShowVersions] = useState(false)
+  const [showExport, setShowExport] = useState(false)
 
   useEffect(() => {
     api
@@ -140,6 +155,21 @@ export default function EditorPage({ id }: { id: number }) {
           placeholder="Template name"
         />
         <div className="mx-2 h-5 w-px bg-ice-200" />
+        <div className="flex rounded-lg border border-ice-200 p-0.5">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                mode === m.id ? 'bg-primary text-white' : 'text-ink-600 hover:bg-ice-100'
+              }`}
+            >
+              <m.icon className="size-3.5" />
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <div className="mx-2 h-5 w-px bg-ice-200" />
         <button
           onClick={undo}
           disabled={!canUndo}
@@ -157,6 +187,20 @@ export default function EditorPage({ id }: { id: number }) {
           <Redo2 className="size-4" />
         </button>
         <div className="flex-1" />
+        <button
+          onClick={() => setShowVersions(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-3 py-2 text-sm font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+        >
+          <History className="size-4" />
+          Versions
+        </button>
+        <button
+          onClick={() => setShowExport(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-3 py-2 text-sm font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+        >
+          <Download className="size-4" />
+          Export
+        </button>
         <span className="text-xs text-ink-400">
           {saving ? 'Saving…' : dirty ? 'Unsaved changes' : lastSavedAt ? `Saved ${lastSavedAt}` : 'Ready'}
         </span>
@@ -170,9 +214,17 @@ export default function EditorPage({ id }: { id: number }) {
         </button>
       </header>
       <div className="flex min-h-0 flex-1">
-        <Canvas onSelect={select} onDrop={onDrop} />
-        <PropertiesPanel />
+        {mode === 'design' && (
+          <>
+            <Canvas onSelect={select} onDrop={onDrop} />
+            <PropertiesPanel />
+          </>
+        )}
+        {mode === 'code' && <CodePanel />}
+        {mode === 'preview' && <PreviewPane />}
       </div>
+      {showVersions && <VersionsDialog onClose={() => setShowVersions(false)} />}
+      {showExport && <ExportDialog onClose={() => setShowExport(false)} />}
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}

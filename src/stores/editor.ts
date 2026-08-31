@@ -32,6 +32,7 @@ interface EditorState {
   past: EmailDoc[]
   future: EmailDoc[]
   load: (templateId: number, name: string, doc: EmailDoc) => void
+  replaceDoc: (doc: EmailDoc) => void
   setName: (name: string) => void
   select: (id: string | null) => void
   insertBlock: (type: BlockType, target: DropTarget) => void
@@ -109,6 +110,8 @@ export const useEditor = create<EditorState>((set) => ({
 
   load: (templateId, name, doc) =>
     set({ templateId, templateName: name, doc, selectedId: null, dirty: false, past: [], future: [], lastSavedAt: null }),
+  replaceDoc: (doc) =>
+    set((state) => ({ ...withHistory(state, doc), selectedId: null })),
   setName: (name) => set({ templateName: name, dirty: true }),
   select: (id) => set({ selectedId: id }),
 

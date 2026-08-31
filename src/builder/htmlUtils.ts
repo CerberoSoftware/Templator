@@ -47,8 +47,11 @@ export function reverseInlineMarkup(html: string): string {
 
 export function parseRichContent(container: Element): string {
   const paragraphs = [...container.querySelectorAll('p.et-p')]
-  if (paragraphs.length === 0) return ''
-  const parts = paragraphs.map((p) => unesc(reverseInlineMarkup(p.innerHTML.trim())))
+  const sources = paragraphs.length > 0 ? paragraphs.map((p) => p.innerHTML) : [container.innerHTML]
+  const parts = sources
+    .map((h) => unesc(reverseInlineMarkup(h.trim())))
+    .map((t) => t.replace(/^[\s\u00a0]+|[\s\u00a0]+$/g, ''))
+    .filter((t) => t !== '')
   return parts.join('\n\n')
 }
 
