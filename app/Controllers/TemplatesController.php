@@ -85,6 +85,16 @@ final class TemplatesController
         Response::ok((new VersionRepository())->listFor($id));
     }
 
+    public function version(Request $req, array $params): void
+    {
+        $templateId = (int) $params['id'];
+        $version = (new VersionRepository())->find($templateId, (int) $params['version']);
+        if ($version === null) {
+            Response::error(404, 'Version not found', 'not_found');
+        }
+        Response::ok($version);
+    }
+
     public function snapshot(Request $req, array $params): void
     {
         $id = (int) $params['id'];

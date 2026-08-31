@@ -28,6 +28,7 @@ $router->add('PUT', '/api/templates/:id', [$templates, 'update']);
 $router->add('DELETE', '/api/templates/:id', [$templates, 'destroy']);
 
 $router->add('GET', '/api/templates/:id/versions', [$templates, 'versions']);
+$router->add('GET', '/api/templates/:id/versions/:version', [$templates, 'version']);
 $router->add('POST', '/api/templates/:id/versions', [$templates, 'snapshot']);
 $router->add('POST', '/api/templates/:id/versions/:version/restore', [$templates, 'restore']);
 
