@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Code2, Download, Eye, FileInput, History, LayoutTemplate, Redo2, Save, Snowflake, Undo2 } from 'lucide-react'
+import { ArrowLeft, Code2, Download, Eye, FileInput, History, LayoutTemplate, Redo2, Save, Snowflake, Type, Undo2 } from 'lucide-react'
 import { api } from '../api/client'
 import { navigate } from '../router'
 import { emptyDoc, type EmailDoc } from '../builder/model'
@@ -13,6 +13,7 @@ import { PropertiesPanel } from '../components/builder/PropertiesPanel'
 import { VersionsDialog } from '../components/builder/VersionsDialog'
 import { ExportDialog } from '../components/builder/ExportDialog'
 import { ImportDialog } from '../components/builder/ImportDialog'
+import { FontsDialog } from '../components/builder/FontsDialog'
 import { componentHtmlToBlocks } from '../builder/componentCodec'
 import { cloneBlock } from '../builder/model'
 import { useComponents } from '../stores/components'
@@ -57,6 +58,7 @@ export default function EditorPage({ id }: { id: number }) {
   const [showVersions, setShowVersions] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [showFonts, setShowFonts] = useState(false)
 
   useEffect(() => {
     api
@@ -201,6 +203,13 @@ export default function EditorPage({ id }: { id: number }) {
         </button>
         <div className="flex-1" />
         <button
+          onClick={() => setShowFonts(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-3 py-2 text-sm font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+        >
+          <Type className="size-4" />
+          Fonts
+        </button>
+        <button
           onClick={() => setShowImport(true)}
           className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-3 py-2 text-sm font-medium text-ink-600 transition hover:border-primary hover:text-primary"
         >
@@ -246,6 +255,7 @@ export default function EditorPage({ id }: { id: number }) {
       {showVersions && <VersionsDialog onClose={() => setShowVersions(false)} />}
       {showExport && <ExportDialog onClose={() => setShowExport(false)} />}
       {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
+      {showFonts && <FontsDialog onClose={() => setShowFonts(false)} />}
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}
