@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { ImagePlus } from 'lucide-react'
 import type { FieldDef } from '../../builder/blocks'
-import { WEB_SAFE_FONTS, type Block } from '../../builder/model'
+import { type Block } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
 import { findBlock } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
 import { useComponents } from '../../stores/components'
+import { useFonts, fontOptions } from '../../stores/fonts'
 import { api } from '../../api/client'
 import { blockToComponentHtml } from '../../builder/componentCodec'
+import { AssetPickerDialog } from './AssetPickerDialog'
 
 function NumberField({ def, value, onChange }: { def: FieldDef; value: number; onChange: (v: number) => void }) {
   return (
@@ -38,6 +41,63 @@ function ColorField({ value, onChange }: { value: string; onChange: (v: string) 
         className="w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 font-mono text-xs focus:border-primary focus:outline-none"
       />
     </div>
+  )
+}
+
+function FontField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Subscribe to useFonts so the select re-renders when brand fonts are saved.
+  useFonts((s) => s.brandFonts)
+  const opts = fontOptions()
+  const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+      {opts.map((f) => (
+        <option key={f.name} value={f.stack}>
+          {f.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function UrlField({
+  def,
+  value,
+  onChange,
+}: {
+  def: FieldDef
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [showPicker, setShowPicker] = useState(false)
+  const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
+  return (
+    <>
+      <input
+        type="url"
+        placeholder={def.placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={base}
+      />
+      <button
+        type="button"
+        onClick={() => setShowPicker(true)}
+        className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-2.5 py-1.5 text-xs font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+      >
+        <ImagePlus className="size-3.5" />
+        Pick from library
+      </button>
+      {showPicker && (
+        <AssetPickerDialog
+          onClose={() => setShowPicker(false)}
+          onPick={(url) => {
+            onChange(url)
+            setShowPicker(false)
+          }}
+        />
+      )}
+    </>
   )
 }
 
@@ -82,20 +142,15 @@ export function Field({ def, value, onChange }: { def: FieldDef; value: unknown;
       )
       break
     case 'font':
-      control = (
-        <select value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} className={base}>
-          {WEB_SAFE_FONTS.map((f) => (
-            <option key={f.name} value={f.stack}>
-              {f.name}
-            </option>
-          ))}
-        </select>
-      )
+      control = <FontField value={String(value ?? '')} onChange={(v) => onChange(v)} />
+      break
+    case 'url':
+      control = <UrlField def={def} value={String(value ?? '')} onChange={(v) => onChange(v)} />
       break
     default:
       control = (
         <input
-          type={def.type === 'url' ? 'url' : 'text'}
+          type="text"
           placeholder={def.placeholder}
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
