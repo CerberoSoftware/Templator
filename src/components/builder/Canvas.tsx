@@ -28,7 +28,13 @@ export interface MoveData {
   id: string
 }
 
-export type ActiveDrag = DragData | MoveData
+export interface ComponentDragData {
+  kind: 'component'
+  componentId: number
+  name: string
+}
+
+export type ActiveDrag = DragData | MoveData | ComponentDragData
 
 interface CanvasProps {
   onSelect: (id: string | null) => void
@@ -104,7 +110,9 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
       const x = clientX - iframeRect.left
       const y = clientY - iframeRect.top
 
-      const isTwocol = (payload.kind === 'new' && payload.type === 'twocol') || (payload.kind === 'move' && findBlock(doc, payload.id)?.block.type === 'twocol')
+      const isTwocol =
+        (payload.kind === 'new' && payload.type === 'twocol') ||
+        (payload.kind === 'move' && findBlock(doc, payload.id)?.block.type === 'twocol')
 
       let owner: { id: string; column: 0 | 1 } | null = null
       if (!isTwocol) {
@@ -207,7 +215,9 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const activeLabel = active
     ? active.kind === 'new'
       ? REGISTRY[active.type].label
-      : (REGISTRY[findBlock(doc, active.id)?.block.type ?? 'text']?.label ?? 'Block')
+      : active.kind === 'move'
+        ? (REGISTRY[findBlock(doc, active.id)?.block.type ?? 'text']?.label ?? 'Block')
+        : active.name
     : ''
 
   return (

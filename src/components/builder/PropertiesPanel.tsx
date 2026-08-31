@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import type { FieldDef } from '../../builder/blocks'
 import { WEB_SAFE_FONTS, type Block } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
 import { findBlock } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
+import { useComponents } from '../../stores/components'
+import { api } from '../../api/client'
+import { blockToComponentHtml } from '../../builder/componentCodec'
 
 function NumberField({ def, value, onChange }: { def: FieldDef; value: number; onChange: (v: number) => void }) {
   return (
@@ -197,6 +201,72 @@ function BlockPanel({
         def.fields.map((f) => (
           <Field key={f.key} def={f} value={(block.props as unknown as Record<string, unknown>)[f.key]} onChange={(v) => onProp(f.key, v)} />
         ))}
+      <SaveAsComponent block={block} />
+    </div>
+  )
+}
+
+function SaveAsComponent({ block }: { block: Block }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const loadComponents = useComponents((s) => s.load)
+
+  const save = async () => {
+    setError(null)
+    try {
+      await api.post('/api/components', {
+        name: name.trim() || `${REGISTRY[block.type].label} component`,
+        category: REGISTRY[block.type].category,
+        html_template: blockToComponentHtml(block),
+      })
+      await loadComponents()
+      setOpen(false)
+      setName('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save component')
+    }
+  }
+
+  return (
+    <div className="border-t border-ice-100 pt-3">
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full rounded-lg border border-ice-200 px-3 py-2 text-xs font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+        >
+          Save as component
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void save()
+              if (e.key === 'Escape') setOpen(false)
+            }}
+            placeholder="Component name"
+            className="w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+          />
+          {error && <p className="text-[11px] text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => void save()}
+              className="flex-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-dark"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="flex-1 rounded-lg border border-ice-200 px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:bg-ice-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

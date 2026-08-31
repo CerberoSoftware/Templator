@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
+import { Trash2 } from 'lucide-react'
 import {
   AlignLeft,
+  Blocks,
   Columns2,
   Footprints,
   Heading1,
@@ -14,7 +17,8 @@ import {
 } from 'lucide-react'
 import type { BlockType } from '../../builder/model'
 import { REGISTRY_ORDER } from '../../builder/blocks'
-import type { DragData } from './Canvas'
+import type { ActiveDrag } from './Canvas'
+import { useComponents } from '../../stores/components'
 
 const ICONS: Record<BlockType, typeof Type> = {
   header: PanelTop,
@@ -33,7 +37,7 @@ const ICONS: Record<BlockType, typeof Type> = {
 function PaletteItem({ type, label }: { type: BlockType; label: string }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${type}`,
-    data: { kind: 'new', type } satisfies DragData,
+    data: { kind: 'new', type } satisfies ActiveDrag,
   })
   const Icon = ICONS[type]
   return (
@@ -49,7 +53,43 @@ function PaletteItem({ type, label }: { type: BlockType; label: string }) {
   )
 }
 
+function ComponentItem({ id, name }: { id: number; name: string }) {
+  const removeComponent = useComponents((s) => s.remove)
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `component-${id}`,
+    data: { kind: 'component', componentId: id, name } satisfies ActiveDrag,
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`group flex cursor-grab items-center gap-2.5 rounded-lg border border-ice-200 bg-white px-3 py-2 text-sm text-ink-900 transition hover:border-primary hover:bg-primary-soft active:cursor-grabbing ${isDragging ? 'opacity-40' : ''}`}
+    >
+      <Blocks className="size-4 shrink-0 text-secondary" />
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          void removeComponent(id)
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="Delete component"
+        className="hidden rounded p-1 text-ink-400 transition hover:text-red-600 group-hover:block"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </div>
+  )
+}
+
 export function Palette() {
+  const components = useComponents((s) => s.components)
+  const loadComponents = useComponents((s) => s.load)
+  useEffect(() => {
+    void loadComponents()
+  }, [loadComponents])
+
   const categories = new Map<string, Array<{ type: BlockType; label: string }>>()
   for (const def of REGISTRY_ORDER) {
     const list = categories.get(def.category) ?? []
@@ -67,6 +107,17 @@ export function Palette() {
           ))}
         </div>
       ))}
+      <div className="flex flex-col gap-1.5">
+        <h3 className="px-1 text-[11px] font-medium uppercase tracking-wider text-ink-600">My components</h3>
+        {components.length === 0 && (
+          <p className="px-1 text-[11px] leading-snug text-ink-400">
+            Select a block, then use “Save as component” to reuse it here.
+          </p>
+        )}
+        {components.map((c) => (
+          <ComponentItem key={c.id} id={c.id} name={c.name} />
+        ))}
+      </div>
     </aside>
   )
 }

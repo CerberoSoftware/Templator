@@ -36,6 +36,7 @@ interface EditorState {
   setName: (name: string) => void
   select: (id: string | null) => void
   insertBlock: (type: BlockType, target: DropTarget) => void
+  insertBlocks: (blocks: Block[], target: DropTarget) => void
   moveBlock: (id: string, target: DropTarget) => void
   removeBlock: (id: string) => void
   duplicateBlock: (id: string) => void
@@ -130,6 +131,26 @@ export const useEditor = create<EditorState>((set) => ({
         ref.block.columns[target.path.column ?? 0] = newList
       }
       return { ...withHistory(state, doc), selectedId: block.id }
+    }),
+
+  insertBlocks: (blocks, target) =>
+    set((state) => {
+      const placeable = blocks.filter((b) => canPlace(b.type, target.path))
+      if (placeable.length === 0) return {}
+      const doc = structuredClone(state.doc)
+      let list = [...listFor(doc, target.path)]
+      let index = Math.max(0, Math.min(target.index, list.length))
+      for (const block of placeable) {
+        list = insertIntoList(list, index, block)
+        index++
+      }
+      if (target.path.scope === 'root') doc.blocks = list
+      else {
+        const ref = findBlock(doc, target.path.blockId!)
+        if (!ref || ref.block.type !== 'twocol') return {}
+        ref.block.columns[target.path.column ?? 0] = list
+      }
+      return { ...withHistory(state, doc), selectedId: placeable[placeable.length - 1].id }
     }),
 
   moveBlock: (id, target) =>
