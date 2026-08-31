@@ -1,0 +1,7 @@
+node_modules/
+public/assets/
+public/uploads/*
+!public/uploads/.gitkeep
+app/config.php
+.DS_Store
+*.log

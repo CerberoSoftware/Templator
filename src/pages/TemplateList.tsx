@@ -1,0 +1,166 @@
+import { useEffect, useState } from 'react'
+import { FilePlus2, LogOut, Pencil, Snowflake, Trash2 } from 'lucide-react'
+import { api } from '../api/client'
+import { formatDateTime } from '../lib/utils'
+import { navigate } from '../router'
+import { useAuth } from '../stores/auth'
+
+interface TemplateRow {
+  id: number
+  name: string
+  created_at: string
+  updated_at: string
+  version_count: number
+}
+
+export default function TemplateList() {
+  const logout = useAuth((s) => s.logout)
+  const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<TemplateRow | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+
+  const load = async () => {
+    try {
+      setTemplates(await api.get<TemplateRow[]>('/api/templates'))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load templates')
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  const createTemplate = async () => {
+    try {
+      const data = await api.post<{ id: number }>('/api/templates', { name: 'Untitled template' })
+      navigate(`/editor/${data.id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create template')
+    }
+  }
+
+  const remove = async (template: TemplateRow) => {
+    if (!confirm(`Delete "${template.name}" and its ${template.version_count} saved versions? This cannot be undone.`)) return
+    try {
+      await api.del(`/api/templates/${template.id}`)
+      setTemplates((rows) => rows?.filter((r) => r.id !== template.id) ?? null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete template')
+    }
+  }
+
+  const commitRename = async () => {
+    if (!renaming) return
+    const name = renameValue.trim()
+    const target = renaming
+    setRenaming(null)
+    if (name === '' || name === target.name) return
+    try {
+      await api.put(`/api/templates/${target.id}`, { name })
+      setTemplates((rows) => rows?.map((r) => (r.id === target.id ? { ...r, name } : r)) ?? null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to rename template')
+    }
+  }
+
+  return (
+    <div className="h-full overflow-auto">
+      <header className="sticky top-0 z-10 border-b border-ice-200 bg-white/85 backdrop-blur">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <Snowflake className="size-6 text-primary" />
+            <span className="text-lg font-bold tracking-tight">eTemplator</span>
+          </div>
+          <button
+            onClick={() => void logout()}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ice-100 hover:text-ink-900"
+          >
+            <LogOut className="size-4" />
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-4xl px-6 py-10">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Templates</h1>
+            <p className="mt-1 text-sm text-ink-600">Build and export highly compatible email templates.</p>
+          </div>
+          <button
+            onClick={() => void createTemplate()}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-dark"
+          >
+            <FilePlus2 className="size-4" />
+            New template
+          </button>
+        </div>
+
+        {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+
+        {templates === null ? (
+          <p className="py-16 text-center text-sm text-ink-400">Loading…</p>
+        ) : templates.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-ice-200 bg-white py-16 text-center">
+            <Snowflake className="mx-auto mb-3 size-8 text-ice-300" />
+            <p className="font-medium">No templates yet</p>
+            <p className="mt-1 text-sm text-ink-600">Create your first template to get started.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-ice-100 overflow-hidden rounded-2xl border border-ice-200 bg-white">
+            {templates.map((t) => (
+              <li key={t.id} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-ice-50">
+                <button
+                  onClick={() => navigate(`/editor/${t.id}`)}
+                  className="min-w-0 flex-1 text-left"
+                  title="Open in builder"
+                >
+                  {renaming?.id === t.id ? (
+                    <input
+                      value={renameValue}
+                      autoFocus
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => void commitRename()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void commitRename()
+                        if (e.key === 'Escape') setRenaming(null)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full rounded border border-primary px-2 py-1 text-sm font-semibold outline-none"
+                    />
+                  ) : (
+                    <p className="truncate font-semibold">{t.name}</p>
+                  )}
+                  <p className="mt-0.5 text-xs text-ink-400">
+                    Updated {formatDateTime(t.updated_at)} · {t.version_count} versions
+                  </p>
+                </button>
+                <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                  <button
+                    onClick={() => {
+                      setRenaming(t)
+                      setRenameValue(t.name)
+                    }}
+                    className="rounded-lg p-2 text-ink-600 transition hover:bg-ice-100"
+                    title="Rename"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => void remove(t)}
+                    className="rounded-lg p-2 text-ink-600 transition hover:bg-red-50 hover:text-red-600"
+                    title="Delete"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </div>
+  )
+}

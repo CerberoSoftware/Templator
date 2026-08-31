@@ -1,0 +1,22 @@
+Options -Indexes
+DirectoryIndex index.php
+
+RewriteEngine On
+
+RewriteRule (^|/)\. - [F]
+
+RewriteRule ^(app|migrations|scripts|tests|node_modules|src|public)(/|$) - [F]
+
+RewriteRule ^([^/]+\.(sql|sh|ts|tsx|json|ya?ml|lock|md|html))$ - [F]
+
+RewriteCond %{REQUEST_URI} !^/index\.php$
+RewriteRule \.php$ - [F]
+
+RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^ index.php [QSA,L]

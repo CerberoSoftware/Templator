@@ -1,0 +1,39 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php.Dockerfile
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      ET_DB_HOST: mysql
+      ET_DB_USER: etemplator
+      ET_DB_PASS: etemplator
+      ET_DB_NAME: etemplator
+    command: ["php", "-S", "0.0.0.0:80", "index.php"]
+    ports:
+      - "8181:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: etemplator
+      MYSQL_USER: etemplator
+      MYSQL_PASSWORD: etemplator
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  mysql-data:
