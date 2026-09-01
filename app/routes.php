@@ -20,6 +20,7 @@ $router->add('GET', '/api/health', static function (): void {
 $router->add('POST', '/api/auth/login', [$auth, 'login'], true);
 $router->add('GET', '/api/auth/me', [$auth, 'me']);
 $router->add('POST', '/api/auth/logout', [$auth, 'logout']);
+$router->add('POST', '/api/auth/change-password', [$auth, 'changePassword']);
 
 $router->add('GET', '/api/templates', [$templates, 'index']);
 $router->add('POST', '/api/templates', [$templates, 'store']);

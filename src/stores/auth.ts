@@ -8,6 +8,7 @@ interface AuthState {
   init: () => Promise<void>
   login: (password: string) => Promise<string | null>
   logout: () => Promise<void>
+  changePassword: (current: string, next: string) => Promise<string | null>
 }
 
 export const useAuth = create<AuthState>((set) => ({
@@ -38,5 +39,13 @@ export const useAuth = create<AuthState>((set) => ({
       setCsrf('')
     }
     set({ status: 'guest' })
+  },
+  changePassword: async (current, next) => {
+    try {
+      await api.post('/api/auth/change-password', { current_password: current, new_password: next })
+      return null
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Failed to change password'
+    }
   },
 }))
