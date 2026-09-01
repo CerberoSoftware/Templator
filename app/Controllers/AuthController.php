@@ -36,8 +36,8 @@ final class AuthController
 
     public function changePassword(Request $req): void
     {
-        $current = $req->json('current_password') ?? '';
-        $new     = $req->json('new_password') ?? '';
+        $current = $req->string('current_password');
+        $new     = $req->string('new_password');
 
         if (strlen($new) < 8) {
             Response::error(422, 'Password must be at least 8 characters.', 'password_too_short');

@@ -23,7 +23,7 @@ if (!is_file($configFile)) {
 
 $config = require $configFile;
 
-Et\Core\Config::init(is_array($config) ? $config : []);
+Et\Core\Config::init(is_array($config) ? $config : [], $configFile);
 
 set_exception_handler(static function (Throwable $e): void {
     error_log('[etemplator] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
