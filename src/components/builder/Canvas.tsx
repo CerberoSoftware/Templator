@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, useDraggable, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
 import { GripVertical, Copy, Trash2 } from 'lucide-react'
 import { renderEmail } from '../../builder/render'
-import { type Block, type EmailDoc, type BlockType, findBlock } from '../../builder/model'
+import { type EmailDoc, type BlockType, findBlock } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
 import { useEditor, type DropTarget, type ListPath } from '../../stores/editor'
 import { Palette } from './Palette'
@@ -51,10 +51,6 @@ function rectOf(el: HTMLElement, iframeOrigin: { left: number; top: number }): R
     width: r.width,
     height: r.height,
   }
-}
-
-function inside(r: Rect, x: number, y: number): boolean {
-  return x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height
 }
 
 /** Drag handle overlay for an existing block */
@@ -285,7 +281,21 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
       let owner: { id: string; column: 0 | 1 } | null = null
       if (!isTwocol) {
         for (const cr of colRects) {
-          if (inside(cr.rect, x, y)) owner = { id: cr.id, column: cr.column }
+          const inX = x >= cr.rect.left && x <= cr.rect.left + cr.rect.width
+          // Allow y slightly outside col rect so drops near column edges still count
+          const inY = y >= cr.rect.top - 24 && y <= cr.rect.top + cr.rect.height + 24
+          if (inX && inY) owner = { id: cr.id, column: cr.column }
+        }
+        // Fallback: if y is far outside measured col rects but x is within, still treat as column
+        if (!owner) {
+          for (const cr of colRects) {
+            if (x >= cr.rect.left && x <= cr.rect.left + cr.rect.width) {
+              if (contentRect && y >= contentRect.top - 40 && y <= contentRect.top + contentRect.height + 40) {
+                owner = { id: cr.id, column: cr.column }
+                break
+              }
+            }
+          }
         }
       }
 
@@ -419,7 +429,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
             title="Email canvas"
             srcDoc={ready ? undefined : renderEmail(doc, { markers: true, canvas: true })}
             className="absolute left-0 top-0 border-0 shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
-            style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, backgroundColor: '#ffffff' }}
+            style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, backgroundColor: '#ffffff', pointerEvents: active ? 'none' : 'auto' }}
           />
           {ready && (
             <div className="group absolute inset-0" style={{ pointerEvents: 'none' }}>
@@ -464,84 +474,6 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
                   />
                 )
               })}
-              {/* Quick-add gap buttons — click to insert Text block without dragging */}
-              {!active && doc.blocks.length > 0 && contentRect &&
-                (() => {
-                  const rectMap = new Map(blockRects.map((b) => [b.id, b.rect] as const))
-                  const gaps: Array<{ index: number; top: number }> = []
-                  const first = rectMap.get(doc.blocks[0].id)
-                  if (first) gaps.push({ index: 0, top: first.top })
-                  for (let i = 1; i < doc.blocks.length; i++) {
-                    const prev = rectMap.get(doc.blocks[i - 1].id)
-                    const cur = rectMap.get(doc.blocks[i].id)
-                    if (prev && cur) gaps.push({ index: i, top: (prev.top + prev.height + cur.top) / 2 })
-                  }
-                  const last = rectMap.get(doc.blocks[doc.blocks.length - 1].id)
-                  if (last) gaps.push({ index: doc.blocks.length, top: last.top + last.height })
-                  return gaps.map((g) => (
-                    <button
-                      key={`gap-${g.index}`}
-                      type="button"
-                      className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-ice-200 bg-white px-2 py-1 text-[11px] font-medium text-ink-500 opacity-0 shadow-sm transition hover:border-primary hover:text-primary hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
-                      style={{ top: g.top, left: contentRect.left + contentRect.width / 2, pointerEvents: 'auto' }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        insertBlock('text', { path: { scope: 'root' }, index: g.index })
-                      }}
-                      title="Add Text block here"
-                      aria-label={`Add block at position ${g.index + 1}`}
-                    >
-                      <span className="flex size-3.5 items-center justify-center rounded-full bg-primary text-[10px] leading-none text-white">+</span>
-                      Add block
-                    </button>
-                  ))
-                })()}
-              {/* Column gap buttons for twocol */}
-              {!active &&
-                colRects.length > 0 &&
-                doc.blocks
-                  .filter((b) => b.type === 'twocol')
-                  .flatMap((tw) => {
-                    const twBlock = tw as Extract<Block, { type: 'twocol' }>
-                    return ([0, 1] as const).flatMap((colIdx) => {
-                      const colBlocks = twBlock.columns[colIdx]
-                      const colRect = colRects.find((c) => c.id === tw.id && c.column === colIdx)?.rect
-                      if (!colRect) return [] as React.ReactElement[]
-                      const rectMap = new Map(blockRects.map((b) => [b.id, b.rect] as const))
-                      type Gap = { key: string; top: number; index: number }
-                      const gaps: Gap[] = []
-                      if (colBlocks.length === 0) {
-                        gaps.push({ key: `${tw.id}-${colIdx}-0`, top: colRect.top + 8, index: 0 })
-                      } else {
-                        const first = rectMap.get(colBlocks[0].id)
-                        if (first) gaps.push({ key: `${tw.id}-${colIdx}-0`, top: first.top, index: 0 })
-                        for (let i = 1; i < colBlocks.length; i++) {
-                          const prev = rectMap.get(colBlocks[i - 1].id)
-                          const cur = rectMap.get(colBlocks[i].id)
-                          if (prev && cur) gaps.push({ key: `${tw.id}-${colIdx}-${i}`, top: (prev.top + prev.height + cur.top) / 2, index: i })
-                        }
-                        const last = rectMap.get(colBlocks[colBlocks.length - 1].id)
-                        if (last) gaps.push({ key: `${tw.id}-${colIdx}-${colBlocks.length}`, top: last.top + last.height, index: colBlocks.length })
-                      }
-                      return gaps.map((g) => (
-                        <button
-                          key={g.key}
-                          type="button"
-                          className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-ice-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-ink-500 opacity-0 shadow-sm transition hover:border-primary hover:text-primary hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
-                          style={{ top: g.top, left: colRect.left + colRect.width / 2, pointerEvents: 'auto' }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            insertBlock('text', { path: { scope: 'column', blockId: tw.id, column: colIdx }, index: g.index })
-                          }}
-                          title={`Add Text to column ${colIdx + 1}`}
-                          aria-label={`Add block to column ${colIdx + 1} at ${g.index + 1}`}
-                        >
-                          <span className="flex size-3 items-center justify-center rounded-full bg-primary text-[9px] text-white">+</span>
-                          Add
-                        </button>
-                      ))
-                    })
-                  })}
               {selectedId && !active &&
                 (() => {
                   const r = blockRects.find((b) => b.id === selectedId)?.rect
