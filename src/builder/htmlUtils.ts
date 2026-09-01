@@ -14,7 +14,9 @@ export function unesc(s: string): string {
 
 export function renderInlineMarkup(escaped: string, linkColor: string): string {
   return escaped
+    .replace(/~~([^~]+)~~/g, '<s>$1</s>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<u>$1</u>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, text: string, href: string) => {
       return `<a href="${href}" class="et-link" style="color:${linkColor};text-decoration:underline;">${text}</a>`
@@ -42,6 +44,11 @@ export function reverseInlineMarkup(html: string): string {
     .replace(/<b>(.*?)<\/b>/g, '**$1**')
     .replace(/<em>(.*?)<\/em>/g, '*$1*')
     .replace(/<i>(.*?)<\/i>/g, '*$1*')
+    .replace(/<u>(.*?)<\/u>/g, '__$1__')
+    .replace(/<s>(.*?)<\/s>/g, '~~$1~~')
+    .replace(/<strike>(.*?)<\/strike>/g, '~~$1~~')
+    .replace(/<span[^>]*text-decoration:\s*underline[^>]*>(.*?)<\/span>/g, '__$1__')
+    .replace(/<span[^>]*text-decoration:\s*line-through[^>]*>(.*?)<\/span>/g, '~~$1~~')
     .replace(/<br\s*\/?>/g, '\n')
 }
 

@@ -16,7 +16,7 @@ export const imageTextDef: BlockDef = {
       { value: 'left', label: 'Left' },
       { value: 'right', label: 'Right' },
     ] },
-    { key: 'text', label: 'Text', type: 'textarea', placeholder: 'Write your copy…', help: 'Supports **bold**, *italic*, [link](url)' },
+    { key: 'text', label: 'Text', type: 'textarea', placeholder: 'Write your copy…', help: 'Supports **bold**, *italic*, __underline__, ~~strike~~, [link](url) — or use the toolbar above' },
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 24, step: 1, unit: 'px' },
     { key: 'lineHeight', label: 'Line height', type: 'range', min: 1.1, max: 2.5, step: 0.1, unit: '×' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
@@ -50,8 +50,8 @@ export const imageTextDef: BlockDef = {
       : `<img src="${esc(props.imgSrc)}" alt="${esc(props.imgAlt)}" width="${props.imgWidth}" style="display:block;width:${props.imgWidth}px;max-width:100%;height:auto;border:0;">`
     const textCell = renderRich(props.text, props.linkColor)
     const half = Math.round(props.gap / 2)
-    const imgTd = `<td class="et-imgtext-img stack" valign="top" width="${props.imgWidth}" style="width:${props.imgWidth}px;padding-${props.imagePosition === 'left' ? 'right' : 'left'}:${half}px;">${imgCell}</td>`
-    const textTd = `<td class="et-imgtext-text stack" valign="top" style="padding-${props.imagePosition === 'left' ? 'left' : 'right'}:${half}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};">${textCell}</td>`
+    const imgTd = `<td class="et-imgtext-img stack" valign="top" width="${props.imgWidth}" style="width:${props.imgWidth}px;padding-${props.imagePosition === 'left' ? 'right' : 'left'}:${half}px;display:table-cell;vertical-align:top;">${imgCell}</td>`
+    const textTd = `<td class="et-imgtext-text stack" valign="top" style="padding-${props.imagePosition === 'left' ? 'left' : 'right'}:${half}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};display:table-cell;vertical-align:top;">${textCell}</td>`
     const cells = props.imagePosition === 'left' ? `${imgTd}${textTd}` : `${textTd}${imgTd}`
     const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(block.id, ctx)}>

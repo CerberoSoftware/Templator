@@ -297,6 +297,19 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
             }
           }
         }
+        // Final fallback: use twocol block rect to decide column by x half (robust when colRects are stale/empty)
+        if (!owner) {
+          for (const b of doc.blocks) {
+            if (b.type !== 'twocol') continue
+            const br = blockRects.find((r) => r.id === b.id)?.rect
+            if (!br) continue
+            if (y >= br.top - 10 && y <= br.top + br.height + 10 && x >= br.left && x <= br.left + br.width) {
+              const col: 0 | 1 = x < br.left + br.width / 2 ? 0 : 1
+              owner = { id: b.id, column: col }
+              break
+            }
+          }
+        }
       }
 
       const path: ListPath = owner ? { scope: 'column', blockId: owner.id, column: owner.column } : { scope: 'root' }

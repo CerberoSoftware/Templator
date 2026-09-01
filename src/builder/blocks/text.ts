@@ -17,7 +17,7 @@ export const textDef: BlockDef = {
   label: 'Text',
   category: 'Content',
   fields: [
-    { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Write your message…', help: 'Blank line = new paragraph. **bold**, *italic*, [text](https://example.com)' },
+    { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Write your message…', help: 'Blank line = new paragraph. **bold**, *italic*, __underline__, ~~strike~~, [link](https://example.com) — or use the toolbar above' },
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 32, step: 1, unit: 'px' },
     { key: 'lineHeight', label: 'Line height', type: 'range', min: 1.1, max: 2.5, step: 0.1, unit: '×' },
     { key: 'fontFamily', label: 'Font', type: 'font' },

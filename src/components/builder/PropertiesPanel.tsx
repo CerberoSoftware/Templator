@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { ImagePlus, Plus, Trash2, GripVertical } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ImagePlus, Plus, Trash2, GripVertical, Bold, Italic, Underline, Strikethrough, Link2 } from 'lucide-react'
 import type { FieldDef } from '../../builder/blocks'
 import { type Block } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
@@ -162,6 +162,100 @@ function UrlField({
   )
 }
 
+function RichTextarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none resize-y font-mono text-xs'
+  const wrap = (before: string, after: string, placeholderText = 'text') => {
+    const el = ref.current
+    const cur = value ?? ''
+    if (!el) {
+      onChange(cur + before + placeholderText + after)
+      return
+    }
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const selected = cur.slice(start, end) || placeholderText
+    const isWrapped = cur.slice(start - before.length, start) === before && cur.slice(end, end + after.length) === after
+    let newValue: string
+    let newStart: number
+    let newEnd: number
+    if (isWrapped) {
+      newValue = cur.slice(0, start - before.length) + selected + cur.slice(end + after.length)
+      newStart = start - before.length
+      newEnd = newStart + selected.length
+    } else {
+      newValue = cur.slice(0, start) + before + selected + after + cur.slice(end)
+      newStart = start + before.length
+      newEnd = newStart + selected.length
+    }
+    onChange(newValue)
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(newStart, newEnd)
+    })
+  }
+  const onLink = () => {
+    const el = ref.current
+    const cur = value ?? ''
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const selected = cur.slice(start, end) || 'text'
+    const url = window.prompt('Enter URL (https://…)', 'https://')
+    if (!url) return
+    const before = '['
+    const after = `](${url})`
+    const newValue = cur.slice(0, start) + before + selected + after + cur.slice(end)
+    onChange(newValue)
+    const newStart = start + before.length
+    const newEnd = newStart + selected.length
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(newStart, newEnd)
+    })
+  }
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const mod = e.metaKey || e.ctrlKey
+    if (!mod) return
+    const k = e.key.toLowerCase()
+    if (k === 'b') { e.preventDefault(); wrap('**', '**', 'bold') }
+    else if (k === 'i') { e.preventDefault(); wrap('*', '*', 'italic') }
+    else if (k === 'u') { e.preventDefault(); wrap('__', '__', 'underline') }
+    else if (k === 'k') { e.preventDefault(); onLink() }
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1 rounded-lg border border-ice-200 bg-ice-50 p-1">
+        <button type="button" title="Bold (Ctrl+B)" aria-label="Bold" onClick={() => wrap('**', '**', 'bold')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
+          <Bold className="size-3.5" />
+        </button>
+        <button type="button" title="Italic (Ctrl+I)" aria-label="Italic" onClick={() => wrap('*', '*', 'italic')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
+          <Italic className="size-3.5" />
+        </button>
+        <button type="button" title="Underline (Ctrl+U)" aria-label="Underline" onClick={() => wrap('__', '__', 'underline')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
+          <Underline className="size-3.5" />
+        </button>
+        <button type="button" title="Strikethrough" aria-label="Strikethrough" onClick={() => wrap('~~', '~~', 'strike')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
+          <Strikethrough className="size-3.5" />
+        </button>
+        <div className="mx-1 h-4 w-px bg-ice-200" />
+        <button type="button" title="Hyperlink (Ctrl+K)" aria-label="Hyperlink" onClick={onLink} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-primary">
+          <Link2 className="size-3.5" />
+        </button>
+      </div>
+      <textarea
+        ref={ref}
+        rows={5}
+        placeholder={placeholder}
+        value={String(value ?? '')}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        className={base}
+      />
+    </div>
+  )
+}
+
 /** Structured editor for the social-links field */
 function SocialLinksField({ value, onChange }: { value: SocialLink[]; onChange: (v: SocialLink[]) => void }) {
   const links = Array.isArray(value) ? value : []
@@ -254,15 +348,7 @@ export function Field({ def, value, onChange, hideLabel }: { def: FieldDef; valu
   let control = null
   switch (def.type) {
     case 'textarea':
-      control = (
-        <textarea
-          rows={5}
-          placeholder={def.placeholder}
-          value={String(value ?? '')}
-          onChange={(e) => onChange(e.target.value)}
-          className={`${base} resize-y font-mono text-xs`}
-        />
-      )
+      control = <RichTextarea value={String(value ?? '')} onChange={(v) => onChange(v as string)} placeholder={def.placeholder} />
       break
     case 'number':
       control = <NumberField def={def} value={Number(value)} onChange={onChange} />
