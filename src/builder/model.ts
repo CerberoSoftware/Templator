@@ -125,6 +125,8 @@ export interface SocialProps extends CommonBlockProps {
   socialLinks: SocialLink[]
   /** Legacy plain-text format kept for parse round-trip of old docs */
   links?: string
+  /** 'column' = stack vertically (default), 'row' = display side-by-side horizontally */
+  layout: 'row' | 'column'
   iconSize: number
   showLabels: boolean
   iconColor: string
@@ -299,6 +301,7 @@ export function allBlocks(doc: EmailDoc): Block[] {
  *  - back-fills blockBg / blockRadius / widthPct on every block
  *  - back-fills paddingX on footer / social blocks that lacked it
  *  - migrates legacy social `links` string → `socialLinks` array
+ *  - back-fills social `layout` field
  * Safe to call on already-current docs.
  */
 export function migrateDoc(raw: unknown): EmailDoc {
@@ -357,6 +360,7 @@ export function migrateDoc(raw: unknown): EmailDoc {
         if (p['showLabels'] === undefined) p['showLabels'] = true
         if (p['iconColor'] === undefined) p['iconColor'] = '#2b7fe0'
         if (p['align'] === undefined) p['align'] = 'center'
+        if (p['layout'] === undefined) p['layout'] = 'column'
       }
       if (b.type === 'twocol') {
         migrate(b.columns[0])

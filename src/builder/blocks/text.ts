@@ -44,6 +44,7 @@ export const textDef: BlockDef = {
     const tdStyle = outerTdStyle(
       `padding:${props.paddingY}px ${props.paddingX}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};text-align:${props.align};`,
       props,
+      ctx.contentWidth,
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-text" style="${tdStyle}">

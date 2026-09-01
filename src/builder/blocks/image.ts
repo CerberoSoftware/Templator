@@ -35,7 +35,7 @@ export const imageDef: BlockDef = {
         ? `<div class="et-img-placeholder" style="background-color:#e7eef6;border:1px dashed #b3cbe8;border-radius:6px;color:#5c7793;font-family:Arial;font-size:13px;padding:28px 12px;text-align:center;">Image placeholder — set an image URL</div>`
         : `<img src="${esc(props.src)}" alt="${esc(props.alt)}" width="${props.width}" class="et-img" style="display:block;${margin}width:${props.width}px;max-width:100%;height:auto;border:0;">`
     const wrapped = props.link !== '' ? `<a href="${esc(props.link)}">${img}</a>` : img
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-image" align="${props.align}" style="${tdStyle}">${wrapped}</td>
 </tr>`

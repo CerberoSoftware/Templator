@@ -21,7 +21,7 @@ export const dividerDef: BlockDef = {
     ...COMMON_DEFAULTS,
   }),
   render: ({ props, id }: { props: DividerProps; id: string }, ctx) => {
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-divider" style="${tdStyle}">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="et-divider-table"><tr><td style="border-top:${props.thickness}px solid ${props.color};font-size:0;line-height:0;">&#160;</td></tr></table>

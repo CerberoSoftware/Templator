@@ -53,7 +53,7 @@ export const imageTextDef: BlockDef = {
     const imgTd = `<td class="et-imgtext-img stack" valign="top" width="${props.imgWidth}" style="width:${props.imgWidth}px;padding-${props.imagePosition === 'left' ? 'right' : 'left'}:${half}px;">${imgCell}</td>`
     const textTd = `<td class="et-imgtext-text stack" valign="top" style="padding-${props.imagePosition === 'left' ? 'left' : 'right'}:${half}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};">${textCell}</td>`
     const cells = props.imagePosition === 'left' ? `${imgTd}${textTd}` : `${textTd}${imgTd}`
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(block.id, ctx)}>
   <td class="et-imgtext" style="${tdStyle}">
     <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><![endif]-->
@@ -75,7 +75,6 @@ export const imageTextDef: BlockDef = {
     const img = imgTd.querySelector('img') as HTMLImageElement | null
     const tdSt = styleOf(td)
     const textSt = styleOf(textTd)
-    // Determine image position by DOM order
     const imgFirst = imgTd.compareDocumentPosition(textTd) & Node.DOCUMENT_POSITION_FOLLOWING
     return {
       imgSrc: img?.getAttribute('src') ?? '',

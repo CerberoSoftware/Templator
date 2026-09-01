@@ -61,7 +61,7 @@ export const twoColDef: BlockDef = {
     const props = block.props
     const [w1, w2] = RATIOS[props.ratio]
     const half = Math.round(props.gap / 2)
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(block.id, ctx)}>
   <td class="et-twocol" style="${tdStyle}">
     <!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="${w1}%" valign="top"><![endif]-->

@@ -38,7 +38,6 @@ const ICONS: Record<string, string> = {
 /** Return the SVG string for a platform, coloured via `color` CSS property */
 export function socialIcon(platform: string, size: number, color: string): string {
   const svg = ICONS[platform] ?? ICONS['Twitter']
-  // Inject width/height/color into the opening <svg> tag
   return svg.replace(
     '<svg ',
     `<svg width="${size}" height="${size}" style="color:${color};vertical-align:middle;" `,
@@ -72,6 +71,15 @@ export const socialDef: BlockDef = {
   category: 'Structure',
   fields: [
     { key: 'socialLinks', label: 'Social links', type: 'social-links' },
+    {
+      key: 'layout',
+      label: 'Layout',
+      type: 'select',
+      options: [
+        { value: 'column', label: 'Vertical (stacked)' },
+        { value: 'row', label: 'Horizontal (side by side)' },
+      ],
+    },
     { key: 'iconSize', label: 'Icon size', type: 'range', min: 14, max: 40, step: 2, unit: 'px' },
     { key: 'showLabels', label: 'Show labels', type: 'toggle', help: 'Show platform name next to icon' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
@@ -89,6 +97,7 @@ export const socialDef: BlockDef = {
       { platform: 'LinkedIn', href: 'https://www.linkedin.com/company/example' },
       { platform: 'Instagram', href: 'https://instagram.com/example' },
     ],
+    layout: 'column',
     iconSize: 20,
     showLabels: true,
     align: 'center',
@@ -104,25 +113,33 @@ export const socialDef: BlockDef = {
     const links: SocialLink[] = props.socialLinks ?? parseSocialLinks(props.links ?? '')
     const align = props.align ?? 'center'
     const tdAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left'
+    const layout = props.layout ?? 'column'
 
-    const rows = links
-      .map((entry) => {
-        const icon = socialIcon(entry.platform, props.iconSize, props.iconColor)
-        const label = props.showLabels
-          ? `<span style="font-family:${props.fontFamily};font-size:${props.fontSize}px;color:${props.color};vertical-align:middle;margin-left:8px;">${esc(entry.platform)}</span>`
-          : ''
-        const inner = `${icon}${label}`
-        return entry.href
-          ? `<a href="${esc(entry.href)}" style="text-decoration:none;display:inline-block;">${inner}</a>`
-          : `<span style="display:inline-block;">${inner}</span>`
-      })
-      .map((item) => `<div style="margin:4px 0;text-align:${tdAlign};">${item}</div>`)
-      .join('\n')
+    const items = links.map((entry) => {
+      const icon = socialIcon(entry.platform, props.iconSize, props.iconColor)
+      const label = props.showLabels
+        ? `<span style="font-family:${props.fontFamily};font-size:${props.fontSize}px;color:${props.color};vertical-align:middle;margin-left:8px;">${esc(entry.platform)}</span>`
+        : ''
+      const inner = `${icon}${label}`
+      return entry.href
+        ? `<a href="${esc(entry.href)}" style="text-decoration:none;display:inline-block;">${inner}</a>`
+        : `<span style="display:inline-block;">${inner}</span>`
+    })
 
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    let content: string
+    if (layout === 'row') {
+      // Horizontal: all items in one line, separated by a small gap
+      const gap = props.iconSize
+      content = `<div style="text-align:${tdAlign};">${items.map((item) => `<span style="display:inline-block;margin:0 ${Math.round(gap / 2)}px;">${item}</span>`).join('')}</div>`
+    } else {
+      // Vertical: each item on its own line (original behaviour)
+      content = items.map((item) => `<div style="margin:4px 0;text-align:${tdAlign};">${item}</div>`).join('\n')
+    }
+
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-social" align="${tdAlign}" style="${tdStyle}">
-${rows}
+${content}
   </td>
 </tr>`
   },
@@ -133,15 +150,19 @@ ${rows}
     td.querySelectorAll<HTMLElement>('div').forEach((div) => {
       const a = div.querySelector('a')
       const href = a?.getAttribute('href') ?? ''
-      // Try to identify platform from label text or icon aria/title
       const span = div.querySelector('span')
       const platform = span?.textContent?.trim() || 'Twitter'
       links.push({ platform: matchPlatform(platform), href })
     })
+    // Detect row layout: if there are no block-level divs wrapping each item
+    // but instead a single wrapper div with inline spans, mark as row
+    const divs = Array.from(td.querySelectorAll<HTMLElement>(':scope > div'))
+    const isRow = divs.length === 1 && divs[0].querySelectorAll('span[style*="inline-block"]').length > 0
     if (links.length === 0) return null
     const tdSt = styleOf(td)
     return {
       socialLinks: links,
+      layout: isRow ? 'row' : 'column',
       iconSize: 20,
       showLabels: true,
       align: (td.getAttribute('align') as 'left' | 'center' | 'right') ?? 'center',

@@ -33,7 +33,7 @@ export const headingDef: BlockDef = {
     ...COMMON_DEFAULTS,
   }),
   render: ({ props, id }: { props: HeadingProps; id: string }, ctx) => {
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-heading" style="${tdStyle}">
     <h${props.level} class="et-h" style="margin:0;font-family:${props.fontFamily};font-size:${HEADING_SIZES[props.level]}px;line-height:1.3;color:${props.color};text-align:${props.align};">${esc(props.text)}</h${props.level}>

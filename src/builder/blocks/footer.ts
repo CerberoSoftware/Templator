@@ -33,6 +33,7 @@ export const footerDef: BlockDef = {
     const tdStyle = outerTdStyle(
       `padding:${props.paddingY}px ${props.paddingX}px;background-color:${props.bgColor};font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:1.5;color:${props.color};text-align:${props.align};`,
       props,
+      ctx.contentWidth,
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-footer" bgcolor="${props.bgColor}" style="${tdStyle}">
@@ -64,8 +65,6 @@ export const footerDef: BlockDef = {
 function paddingX(styleValue: string | null | undefined, fallback: number): number {
   if (styleValue == null || styleValue === '') return fallback
   const parts = styleValue.trim().split(/\s+/)
-  // padding: top | top right | top right bottom | top right bottom left
-  // horizontal value is always at index 1 (if it exists)
   const token = parts.length >= 2 ? parts[1] : parts[0]
   return px(token, fallback)
 }

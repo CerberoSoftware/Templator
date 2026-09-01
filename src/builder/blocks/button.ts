@@ -50,6 +50,7 @@ export const buttonDef: BlockDef = {
     const tdStyle = outerTdStyle(
       `padding:${props.paddingY}px ${props.paddingX}px;`,
       props,
+      ctx.contentWidth,
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-btn-td" align="${props.align}" style="${tdStyle}">

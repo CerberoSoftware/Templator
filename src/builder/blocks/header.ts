@@ -51,6 +51,7 @@ export const headerDef: BlockDef = {
     const tdStyle = outerTdStyle(
       `padding:${props.paddingY}px ${props.paddingX}px;background-color:${props.bgColor};`,
       props,
+      ctx.contentWidth,
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-header" align="${props.align}" bgcolor="${props.bgColor}" style="${tdStyle}">${wrapped}${tagline}</td>
