@@ -21,9 +21,9 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# CONFIGURATION — edit GITHUB_PAT before first run (never commit a real token)
+# CONFIGURATION
 # ---------------------------------------------------------------------------
-GITHUB_PAT="${GITHUB_PAT:-YOUR_PAT_HERE}"
+GITHUB_PAT="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"
 GITHUB_USER="CerberoUK"
 REPO="CerberoSoftware/eTemplator"
 
