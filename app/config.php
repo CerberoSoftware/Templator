@@ -9,7 +9,7 @@ return [
         'charset' => 'utf8mb4',
     ],
     'auth' => [
-        'password_hash' => getenv('ET_PASSWORD_HASH') ?: '$2y$10$NEy1vBbHyG0Nt4u4lDk4cOv15a2/n0.GmvtM1J7YICpPlnbf4N2GC',
+        'password_hash' => getenv('ET_PASSWORD_HASH') ?: '$2y$10$KN3FZdSOp7Bw2EdwICqvq.7Qrhfw9tmK054257zJHUdpYgapJziLO',
     ],
     'uploads' => [
         'dir' => __DIR__ . '/../public/uploads',

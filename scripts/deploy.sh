@@ -14,14 +14,12 @@ Options:
   --migrate     run scripts/migrate.php on the server after syncing
 
 Environment:
-  SG_PHP         PHP binary on the server (default: php8.3 or php)
+  SG_PHP         PHP binary on the server (default: php-wrapper)
 
 Steps:
   1. npm install (if needed) + npm run build
-  2. rsync the project (excluding dev files, uploads, remote config.php)
+  2. rsync the project (excluding dev files and uploads)
   3. optionally run migrations over SSH
-
-The remote app/config.php, public/uploads/ and the .git dir are never touched.
 EOF
   exit 1
 }
@@ -55,13 +53,13 @@ rsync -az --delete \
   --exclude 'src/' \
   --exclude 'tests/' \
   --exclude 'public/uploads/' \
-  --exclude 'app/config.php' \
   --exclude 'docker-compose.yml' \
   --exclude '.DS_Store' \
+  --exclude '*.log' \
   ./ "${SSH_TARGET}:${REMOTE_PATH}/"
 
 if [[ $RUN_MIGRATE -eq 1 ]]; then
-  PHP_BIN="${SG_PHP:-php}"
+  PHP_BIN="${SG_PHP:-php-wrapper}"
   echo "==> Running migrations on server"
   ssh "$SSH_TARGET" "cd '${REMOTE_PATH}' && ${PHP_BIN} scripts/migrate.php"
 fi

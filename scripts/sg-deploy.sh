@@ -11,11 +11,6 @@
 #   --skip-build   Skip the frontend npm build step (useful if you only changed
 #                  PHP files and public/assets is already up to date)
 #
-# Prerequisites on the server:
-#   - git, node/npm (SiteGround provides Node via nvm; adjust NVM_DIR below)
-#   - app/config.php already created with DB creds + bcrypt password hash
-#     (php scripts/hash.php 'your-production-password')
-#
 # Safe to re-run: preserves public/uploads/ on every run.
 # =============================================================================
 set -euo pipefail
@@ -30,8 +25,8 @@ REPO="CerberoSoftware/eTemplator"
 # Absolute path to the app webroot on SiteGround
 DEPLOY_DIR="/home/u1024-ybd75ecffzqg/www/etemplator.cerbero.co/public_html"
 
-# PHP binary — SiteGround typically exposes php8.2 or php8.3
-PHP_BIN="${SG_PHP:-php8.2}"
+# PHP binary — SiteGround exposes php-wrapper in PATH
+PHP_BIN="${SG_PHP:-php-wrapper}"
 
 # Branch to deploy
 BRANCH="main"
@@ -49,8 +44,7 @@ for arg in "$@"; do
 done
 
 # ---------------------------------------------------------------------------
-# Clone into $HOME/deploy-build (NOT /tmp — SiteGround mounts /tmp noexec so
-# node_modules/.bin/* cannot be executed from there)
+# Clone into $HOME/deploy-build (NOT /tmp — SiteGround mounts /tmp noexec)
 # ---------------------------------------------------------------------------
 BUILD_DIR="$HOME/deploy-build-$$"
 trap 'rm -rf "$BUILD_DIR"' EXIT
@@ -66,10 +60,8 @@ git clone --depth=1 --branch "$BRANCH" "$CLONE_URL" "$BUILD_DIR"
 # ---------------------------------------------------------------------------
 if [[ $SKIP_BUILD -eq 0 ]]; then
   echo "==> Installing Node dependencies"
-  # Load nvm if present (SiteGround user-space Node)
   NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
   if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-    # shellcheck disable=SC1091
     source "$NVM_DIR/nvm.sh"
   fi
 
@@ -85,8 +77,6 @@ fi
 
 # ---------------------------------------------------------------------------
 # Sync to deploy directory
-# Preserves:
-#   public/uploads/       — user-uploaded assets (never overwrite)
 # ---------------------------------------------------------------------------
 echo "==> Syncing to ${DEPLOY_DIR}"
 mkdir -p "$DEPLOY_DIR"
@@ -97,7 +87,6 @@ rsync -a --delete \
   --exclude 'public/uploads/' \
   "$BUILD_DIR/" "$DEPLOY_DIR/"
 
-# Ensure writable uploads directory exists
 mkdir -p "${DEPLOY_DIR}/public/uploads"
 
 # ---------------------------------------------------------------------------
