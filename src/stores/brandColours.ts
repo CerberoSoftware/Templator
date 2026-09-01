@@ -9,8 +9,8 @@ function normalize(list: unknown): string[] {
   if (!Array.isArray(list)) return []
   const out: string[] = []
   for (const v of list) {
-    if (isHex(v) && out.length < 5 && !out.includes(v.toLowerCase())) out.push(v.toLowerCase())
-    else if (typeof v === 'string' && out.length < 5) {
+    if (isHex(v) && out.length < 7 && !out.includes(v.toLowerCase())) out.push(v.toLowerCase())
+    else if (typeof v === 'string' && out.length < 7) {
       // allow objects like {hex:"#..."} from older drafts
       const hex = (v as unknown as Record<string, unknown>)['hex']
       if (isHex(hex) && !out.includes((hex as string).toLowerCase())) out.push((hex as string).toLowerCase())
@@ -18,7 +18,7 @@ function normalize(list: unknown): string[] {
     // also handle {color:"#..."} shape
     if (typeof v === 'object' && v !== null) {
       const c = (v as Record<string, unknown>)['color'] ?? (v as Record<string, unknown>)['value']
-      if (isHex(c) && out.length < 5 && !out.includes((c as string).toLowerCase())) out.push((c as string).toLowerCase())
+      if (isHex(c) && out.length < 7 && !out.includes((c as string).toLowerCase())) out.push((c as string).toLowerCase())
     }
   }
   return out
@@ -47,14 +47,14 @@ export const useBrandColours = create<BrandColoursState>((set, get) => ({
     }
   },
   save: async (colours) => {
-    const cleaned = normalize(colours).slice(0, 5)
+    const cleaned = normalize(colours).slice(0, 7)
     await api.put('/api/settings', { settings: { brand_colours: cleaned } })
     set({ colours: cleaned })
   },
   add: async (hex) => {
     if (!isHex(hex)) return false
     const { colours } = get()
-    if (colours.length >= 5) return false
+    if (colours.length >= 7) return false
     const norm = hex.toLowerCase()
     if (colours.includes(norm)) return false
     const next = [...colours, norm]

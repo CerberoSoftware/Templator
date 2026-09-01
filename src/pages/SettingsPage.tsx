@@ -28,7 +28,7 @@ export default function SettingsPage() {
   }, [colours, loaded])
 
   const add = () => {
-    if (draft.length >= 5) return
+    if (draft.length >= 7) return
     setDraft([...draft, '#2b7fe0'])
     setError(null)
   }
@@ -54,8 +54,8 @@ export default function SettingsPage() {
       setError(`Fix invalid hex colours: ${invalid.join(', ')} — use #rrggbb`)
       return
     }
-    if (uniq.length > 5) {
-      setError('Maximum 5 brand colours.')
+    if (uniq.length > 7) {
+      setError('Maximum 7 brand colours.')
       return
     }
     // dedup by lowercasing
@@ -76,7 +76,7 @@ export default function SettingsPage() {
     }
   }
 
-  const canSave = draft.length <= 5 && draft.every((c) => isHex(c.trim())) && draft.map((c) => c.toLowerCase()).length === new Set(draft.map((c) => c.toLowerCase())).size
+  const canSave = draft.length <= 7 && draft.every((c) => isHex(c.trim())) && draft.map((c) => c.toLowerCase()).length === new Set(draft.map((c) => c.toLowerCase())).size
 
   return (
     <div className="min-h-full bg-ice-50">
@@ -87,7 +87,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-2">
           <Palette className="size-4 text-primary" />
           <h1 className="text-sm font-semibold">Brand settings</h1>
-          <span className="hidden text-xs text-ink-400 sm:inline">— up to 5 brand colours, used across the Design page</span>
+          <span className="hidden text-xs text-ink-400 sm:inline">— up to 7 brand colours, used across the Design page</span>
         </div>
         <div className="flex-1" />
         <button onClick={() => void onSave()} disabled={saving || !canSave} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50">
@@ -100,7 +100,7 @@ export default function SettingsPage() {
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-white">1</span>
             Brand colours
-            <span className="ml-2 rounded-full bg-ice-100 px-2 py-0.5 text-xs font-medium text-ink-500">{draft.length}/5</span>
+            <span className="ml-2 rounded-full bg-ice-100 px-2 py-0.5 text-xs font-medium text-ink-500">{draft.length}/7</span>
           </h2>
           <p className="mt-1 text-sm text-ink-500">These colours appear at the top of every colour picker in the Design page for one-click application. Add your primary, secondary and accent colours.</p>
 
@@ -142,13 +142,13 @@ export default function SettingsPage() {
           <div className="mt-4 flex items-center gap-3">
             <button
               onClick={add}
-              disabled={draft.length >= 5}
+              disabled={draft.length >= 7}
               className="flex items-center gap-1.5 rounded-lg border border-dashed border-ice-300 bg-white px-3.5 py-2 text-sm font-medium text-ink-600 hover:border-primary hover:text-primary disabled:opacity-40"
             >
               <Plus className="size-4" />
-              Add colour {draft.length >= 5 ? '(max 5)' : ''}
+              Add colour {draft.length >= 7 ? '(max 7)' : ''}
             </button>
-            <span className="text-xs text-ink-400">{draft.length < 5 ? `${5 - draft.length} slots left` : 'Maximum reached — remove one to add another'}</span>
+            <span className="text-xs text-ink-400">{draft.length < 7 ? `${7 - draft.length} slots left` : 'Maximum reached — remove one to add another'}</span>
           </div>
 
           <div className="mt-6 rounded-xl bg-ice-50 p-4">
