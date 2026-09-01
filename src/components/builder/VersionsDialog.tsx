@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, RotateCcw, X } from 'lucide-react'
 import { api } from '../../api/client'
-import type { EmailDoc } from '../../builder/model'
+import { migrateDoc, type EmailDoc } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
 
 interface VersionRow {
@@ -40,7 +40,7 @@ export function VersionsDialog({ onClose }: { onClose: () => void }) {
       let doc: EmailDoc | null = null
       try {
         const parsed = JSON.parse(full.json_structure) as EmailDoc
-        if (parsed && Array.isArray(parsed.blocks) && parsed.settings) doc = parsed
+        if (parsed && Array.isArray(parsed.blocks) && parsed.settings) doc = migrateDoc(parsed)
       } catch {
         doc = null
       }

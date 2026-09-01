@@ -44,6 +44,7 @@ export const footerDef: BlockDef = {
     const td = childTd(tr, 'et-footer')
     if (!td) return null
     const st = styleOf(td)
+    const paddingShorthand = st.padding
     return {
       content: parseRichContent(td),
       fontSize: parseFloat(st.fontSize) || 12,
@@ -51,10 +52,20 @@ export const footerDef: BlockDef = {
       color: normalizeColor(st.color || '#5c7793'),
       align: alignOf(td, 'center') as FooterProps['align'],
       bgColor: normalizeColor(st.backgroundColor || td.getAttribute('bgcolor') || '#f4f8fc'),
-      paddingY: paddingY(st.padding, 20),
-      paddingX: px(st.paddingLeft, 24),
+      paddingY: paddingY(paddingShorthand, 20),
+      paddingX: paddingX(paddingShorthand, 24),
       blockBg: 'transparent',
       blockRadius: 0,
     } satisfies FooterProps
   },
+}
+
+/** Read the horizontal (left/right) component of a CSS padding shorthand value. */
+function paddingX(styleValue: string | null | undefined, fallback: number): number {
+  if (styleValue == null || styleValue === '') return fallback
+  const parts = styleValue.trim().split(/\s+/)
+  // padding: top | top right | top right bottom | top right bottom left
+  // horizontal value is always at index 1 (if it exists)
+  const token = parts.length >= 2 ? parts[1] : parts[0]
+  return px(token, fallback)
 }

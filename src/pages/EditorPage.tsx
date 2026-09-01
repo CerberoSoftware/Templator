@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Code2, Download, Eye, FileInput, History, LayoutTemplate, Redo2, Save, Snowflake, Type, Undo2 } from 'lucide-react'
 import { api } from '../api/client'
 import { navigate } from '../router'
-import { emptyDoc, type EmailDoc } from '../builder/model'
+import { emptyDoc, migrateDoc, type EmailDoc } from '../builder/model'
 import { renderEmail } from '../builder/render'
 import { inlineCss } from '../builder/inliner'
 import { useEditor } from '../stores/editor'
@@ -74,7 +74,7 @@ export default function EditorPage({ id }: { id: number }) {
         if (t.json_structure) {
           try {
             const raw = JSON.parse(t.json_structure) as Partial<EmailDoc>
-            if (raw && Array.isArray(raw.blocks) && raw.settings) parsed = raw as EmailDoc
+            if (raw && Array.isArray(raw.blocks) && raw.settings) parsed = migrateDoc(raw)
           } catch {
             setError('Stored template JSON is malformed; starting from an empty document.')
           }
