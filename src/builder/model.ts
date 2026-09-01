@@ -20,6 +20,8 @@ export interface CommonBlockProps {
   blockBg: string
   /** Corner radius applied to the outer <td> wrapper in px */
   blockRadius: number
+  /** Width as a percentage of the content width (1-100). Default 100. */
+  widthPct: number
 }
 
 export interface EmailDocSettings {
@@ -112,11 +114,24 @@ export interface DividerProps extends CommonBlockProps {
   paddingX: number
 }
 
+/** A single social network entry */
+export interface SocialLink {
+  platform: string
+  href: string
+}
+
 export interface SocialProps extends CommonBlockProps {
-  links: string
+  /** Structured list of social links */
+  socialLinks: SocialLink[]
+  /** Legacy plain-text format kept for parse round-trip of old docs */
+  links?: string
+  iconSize: number
+  showLabels: boolean
+  iconColor: string
   color: string
   fontSize: number
   fontFamily: string
+  align: Align
   paddingY: number
   paddingX: number
 }
@@ -159,6 +174,7 @@ export interface RawProps {
   html: string
   blockBg: string
   blockRadius: number
+  widthPct: number
 }
 
 export interface BlockBase {
@@ -280,8 +296,9 @@ export function allBlocks(doc: EmailDoc): Block[] {
  *  - outerBg → bodyBg  (5-C rename)
  *  - contentBg → containerBg  (5-C rename)
  *  - back-fills fontFamily / textColor / linkColor on settings
- *  - back-fills blockBg / blockRadius on every block
+ *  - back-fills blockBg / blockRadius / widthPct on every block
  *  - back-fills paddingX on footer / social blocks that lacked it
+ *  - migrates legacy social `links` string → `socialLinks` array
  * Safe to call on already-current docs.
  */
 export function migrateDoc(raw: unknown): EmailDoc {
@@ -311,9 +328,35 @@ export function migrateDoc(raw: unknown): EmailDoc {
       const p = b.props as Record<string, unknown>
       if (p['blockBg'] === undefined) p['blockBg'] = 'transparent'
       if (p['blockRadius'] === undefined) p['blockRadius'] = 0
+      if (p['widthPct'] === undefined) p['widthPct'] = 100
       // 5-B: paddingX on footer + social
       if ((b.type === 'footer' || b.type === 'social') && p['paddingX'] === undefined) {
         p['paddingX'] = 24
+      }
+      // Migrate legacy social links string → socialLinks array
+      if (b.type === 'social') {
+        if (!p['socialLinks'] && p['links']) {
+          p['socialLinks'] = (p['links'] as string)
+            .split('\n')
+            .map((line: string) => line.trim())
+            .filter(Boolean)
+            .map((line: string) => {
+              const sep = line.indexOf('|')
+              return sep === -1
+                ? { platform: line, href: '' }
+                : { platform: line.slice(0, sep).trim(), href: line.slice(sep + 1).trim() }
+            })
+        }
+        if (!p['socialLinks']) {
+          p['socialLinks'] = [
+            { platform: 'Twitter', href: 'https://twitter.com/example' },
+            { platform: 'LinkedIn', href: 'https://www.linkedin.com/company/example' },
+          ]
+        }
+        if (p['iconSize'] === undefined) p['iconSize'] = 20
+        if (p['showLabels'] === undefined) p['showLabels'] = true
+        if (p['iconColor'] === undefined) p['iconColor'] = '#2b7fe0'
+        if (p['align'] === undefined) p['align'] = 'center'
       }
       if (b.type === 'twocol') {
         migrate(b.columns[0])

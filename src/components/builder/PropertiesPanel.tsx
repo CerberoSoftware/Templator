@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ImagePlus } from 'lucide-react'
+import { ImagePlus, Plus, Trash2, GripVertical } from 'lucide-react'
 import type { FieldDef } from '../../builder/blocks'
 import { type Block } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
@@ -10,6 +10,8 @@ import { useFonts, fontOptions } from '../../stores/fonts'
 import { api } from '../../api/client'
 import { blockToComponentHtml } from '../../builder/componentCodec'
 import { AssetPickerDialog } from './AssetPickerDialog'
+import { SOCIAL_PLATFORMS } from '../../builder/blocks/social'
+import type { SocialLink } from '../../builder/model'
 
 function NumberField({ def, value, onChange }: { def: FieldDef; value: number; onChange: (v: number) => void }) {
   return (
@@ -120,6 +122,83 @@ function UrlField({
   )
 }
 
+/** Structured editor for the social-links field */
+function SocialLinksField({ value, onChange }: { value: SocialLink[]; onChange: (v: SocialLink[]) => void }) {
+  const links = Array.isArray(value) ? value : []
+  const base = 'rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
+
+  const update = (index: number, patch: Partial<SocialLink>) => {
+    const next = links.map((l, i) => (i === index ? { ...l, ...patch } : l))
+    onChange(next)
+  }
+
+  const add = () => onChange([...links, { platform: 'Twitter', href: '' }])
+
+  const remove = (index: number) => onChange(links.filter((_, i) => i !== index))
+
+  // Simple drag-to-reorder via mouse events
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+
+  const onDragStart = (i: number) => setDragIdx(i)
+  const onDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault()
+    if (dragIdx === null || dragIdx === i) return
+    const next = [...links]
+    const [moved] = next.splice(dragIdx, 1)
+    next.splice(i, 0, moved)
+    setDragIdx(i)
+    onChange(next)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {links.map((link, i) => (
+        <div
+          key={i}
+          draggable
+          onDragStart={() => onDragStart(i)}
+          onDragOver={(e) => onDragOver(e, i)}
+          onDragEnd={() => setDragIdx(null)}
+          className="flex items-center gap-1.5 rounded-xl border border-ice-200 bg-ice-50 p-2"
+        >
+          <GripVertical className="size-3.5 shrink-0 cursor-grab text-ink-300" />
+          <select
+            value={link.platform}
+            onChange={(e) => update(i, { platform: e.target.value })}
+            className={`w-32 shrink-0 ${base}`}
+          >
+            {SOCIAL_PLATFORMS.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <input
+            type="url"
+            placeholder="https://"
+            value={link.href}
+            onChange={(e) => update(i, { href: e.target.value })}
+            className={`min-w-0 flex-1 ${base}`}
+          />
+          <button
+            type="button"
+            onClick={() => remove(i)}
+            className="shrink-0 rounded p-1 text-ink-300 transition hover:bg-red-50 hover:text-red-500"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-ice-300 px-3 py-2 text-xs font-medium text-ink-500 transition hover:border-primary hover:text-primary"
+      >
+        <Plus className="size-3.5" />
+        Add network
+      </button>
+    </div>
+  )
+}
+
 export function Field({ def, value, onChange }: { def: FieldDef; value: unknown; onChange: (v: unknown) => void }) {
   const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
   let control = null
@@ -168,6 +247,14 @@ export function Field({ def, value, onChange }: { def: FieldDef; value: unknown;
       break
     case 'url':
       control = <UrlField def={def} value={String(value ?? '')} onChange={(v) => onChange(v)} />
+      break
+    case 'social-links':
+      control = (
+        <SocialLinksField
+          value={value as SocialLink[]}
+          onChange={(v) => onChange(v)}
+        />
+      )
       break
     default:
       control = (
