@@ -1,11 +1,12 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Snowflake } from 'lucide-react'
 import { usePath } from './router'
 import { useAuth } from './stores/auth'
 import Login from './pages/Login'
-import TemplateList from './pages/TemplateList'
-import EditorPage from './pages/EditorPage'
-import SettingsPage from './pages/SettingsPage'
+
+const TemplateList = lazy(() => import('./pages/TemplateList'))
+const EditorPage = lazy(() => import('./pages/EditorPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 export default function App() {
   const status = useAuth((s) => s.status)
@@ -30,16 +31,28 @@ export default function App() {
   }
 
   if (path === '/' || path === '/templates') {
-    return <TemplateList />
+    return (
+      <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-ink-400">Loading…</div>}>
+        <TemplateList />
+      </Suspense>
+    )
   }
 
   const editorMatch = path.match(/^\/editor\/(\d+)$/)
   if (editorMatch) {
-    return <EditorPage id={Number(editorMatch[1])} />
+    return (
+      <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-ink-400">Loading editor…</div>}>
+        <EditorPage id={Number(editorMatch[1])} />
+      </Suspense>
+    )
   }
 
   if (path === '/settings' || path === '/brand' || path === '/brand-settings') {
-    return <SettingsPage />
+    return (
+      <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-ink-400">Loading settings…</div>}>
+        <SettingsPage />
+      </Suspense>
+    )
   }
 
   return (

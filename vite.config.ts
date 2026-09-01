@@ -12,6 +12,20 @@ export default defineConfig({
     assetsDir: '',
     emptyOutDir: true,
     manifest: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('zustand')) return 'vendor-react'
+            if (id.includes('@dnd-kit')) return 'vendor-dnd'
+            if (id.includes('codemirror') || id.includes('@codemirror') || id.includes('@uiw')) return 'vendor-codemirror'
+            if (id.includes('lucide-react')) return 'vendor-icons'
+            return 'vendor'
+          }
+        },
+      },
+    },
   },
   server: {
     proxy: {
