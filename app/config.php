@@ -3,9 +3,9 @@ return [
     'db' => [
         'host' => getenv('ET_DB_HOST') ?: '127.0.0.1',
         'port' => (int) (getenv('ET_DB_PORT') ?: '3306'),
-        'name' => getenv('ET_DB_NAME') ?: 'etemplator',
-        'user' => getenv('ET_DB_USER') ?: 'etemplator',
-        'pass' => getenv('ET_DB_PASS') ?: '',
+        'name' => getenv('ET_DB_NAME') ?: 'db8g2zfk9crzna',
+        'user' => getenv('ET_DB_USER') ?: 'ud4k2dkweidal',
+        'pass' => getenv('ET_DB_PASS') ?: 'g111%2@4dku2',
         'charset' => 'utf8mb4',
     ],
     'auth' => [
