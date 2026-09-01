@@ -94,7 +94,6 @@ rsync -a --delete \
   --exclude 'tests/' \
   --exclude 'docker-compose.yml' \
   --exclude 'docker/' \
-  --exclude 'scripts/sg-deploy.sh' \
   --exclude '.DS_Store' \
   --exclude 'public/uploads/' \
   --exclude 'app/config.php' \
