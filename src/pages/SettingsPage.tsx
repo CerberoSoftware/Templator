@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Palette, Plus, Trash2, Check } from 'lucide-react'
 import { navigate } from '../router'
+import { api } from '../api/client'
 import { useBrandColours } from '../stores/brandColours'
 
 function isHex(v: string) {
@@ -170,7 +171,28 @@ export default function SettingsPage() {
 
         <div className="mt-6 flex justify-end gap-2">
           <button onClick={() => navigate('/')} className="rounded-lg border border-ice-200 bg-white px-4 py-2 text-sm">Back to templates</button>
-          <button onClick={() => navigate('/editor/1')} className="rounded-lg border border-ice-200 bg-white px-4 py-2 text-sm hover:border-primary hover:text-primary">Go to Design (demo)</button>
+          <button
+            onClick={async () => {
+              try {
+                const rows = await api.get<{ id: number }[]>('/api/templates')
+                if (rows.length > 0) {
+                  navigate(`/editor/${rows[0].id}`)
+                  return
+                }
+              } catch {
+                // fall through to create
+              }
+              try {
+                const data = await api.post<{ id: number }>('/api/templates', { name: 'Untitled template' })
+                navigate(`/editor/${data.id}`)
+              } catch {
+                navigate('/')
+              }
+            }}
+            className="rounded-lg border border-ice-200 bg-white px-4 py-2 text-sm hover:border-primary hover:text-primary"
+          >
+            Go to Design (demo)
+          </button>
         </div>
       </main>
     </div>
