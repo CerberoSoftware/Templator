@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Et\Controllers;
 
 use Et\Core\Auth;
+use Et\Core\Config;
 use Et\Core\Request;
 use Et\Core\Response;
 
@@ -35,18 +36,23 @@ final class AuthController
 
     public function changePassword(Request $req): void
     {
-        $current = $req->string('current_password');
-        $new     = $req->string('new_password');
+        $current = $req->json('current_password') ?? '';
+        $new     = $req->json('new_password') ?? '';
+
         if (strlen($new) < 8) {
             Response::error(422, 'Password must be at least 8 characters.', 'password_too_short');
             return;
         }
+
         $result = Auth::login($current);
         if (!$result['ok']) {
             Response::error(403, 'Current password is incorrect.', 'bad_credentials');
             return;
         }
-        Auth::setPassword($new);
+
+        Config::set('auth.password_hash', password_hash($new, PASSWORD_DEFAULT));
+        Config::persist();
+
         Response::ok();
     }
 }
