@@ -8,6 +8,7 @@ import {
   Footprints,
   Heading1,
   Image as ImageIcon,
+  LayoutPanelLeft,
   PanelTop,
   Link2,
   Minus,
@@ -25,6 +26,7 @@ const ICONS: Record<BlockType, typeof Type> = {
   heading: Heading1,
   text: AlignLeft,
   image: ImageIcon,
+  image_text: LayoutPanelLeft,
   button: Square,
   spacer: MoveVertical,
   divider: Minus,
@@ -39,7 +41,7 @@ function PaletteItem({ type, label }: { type: BlockType; label: string }) {
     id: `palette-${type}`,
     data: { kind: 'new', type } satisfies ActiveDrag,
   })
-  const Icon = ICONS[type]
+  const Icon = ICONS[type] ?? Type
   return (
     <button
       ref={setNodeRef}
