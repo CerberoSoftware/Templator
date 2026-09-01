@@ -38,8 +38,10 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
       ? `  <div class="et-preheader" style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(settings.preheader)}${'&#160;'.repeat(40)}</div>\n`
       : ''
   const canvasStyle = canvas ? `  <style>${CANVAS_STYLES}</style>\n` : ''
-  // Global link + text colour from settings (progressive enhancement — individual blocks still override)
+  // Global link + text colour + font from settings
   const globalStyles = `a { color: ${settings.linkColor ?? '#2b7fe0'}; } body { color: ${settings.textColor ?? '#333333'}; font-family: ${settings.fontFamily ?? 'Arial, Helvetica, sans-serif'}; }`
+  const bodyBg = settings.bodyBg ?? '#f4f8fc'
+  const containerBg = settings.containerBg ?? '#ffffff'
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -52,11 +54,11 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   <xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsToTheInch>96</o:PixelsToTheInch></o:OfficeDocumentSettings></xml>
   <![endif]-->
 </head>
-<body style="margin:0;padding:0;background-color:${settings.outerBg};">
-${canvasStyle}${preheader}  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${settings.outerBg}" class="et-outer" style="background-color:${settings.outerBg};">
+<body style="margin:0;padding:0;background-color:${bodyBg};">
+${canvasStyle}${preheader}  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${bodyBg}" class="et-outer" style="background-color:${bodyBg};">
     <tr>
       <td align="center" class="et-outer-td" style="padding:24px 12px;">
-        <table role="presentation" width="${settings.contentWidth}" cellpadding="0" cellspacing="0" border="0" class="et-content" style="width:${settings.contentWidth}px;max-width:${settings.contentWidth}px;background-color:${settings.contentBg};border-radius:10px;overflow:hidden;">
+        <table role="presentation" width="${settings.contentWidth}" cellpadding="0" cellspacing="0" border="0" class="et-content" style="width:${settings.contentWidth}px;max-width:${settings.contentWidth}px;background-color:${containerBg};border-radius:10px;overflow:hidden;">
 ${rows}
         </table>
       </td>

@@ -221,8 +221,8 @@ export function PropertiesPanel() {
           <div className="border-t border-ice-100 pt-2">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Colours</p>
             <div className="flex flex-col gap-3">
-              <Field def={{ key: 'outerBg', label: 'Outer background', type: 'color' }} value={doc.settings.outerBg} onChange={(v) => updateSettings({ outerBg: String(v) })} />
-              <Field def={{ key: 'contentBg', label: 'Content background', type: 'color' }} value={doc.settings.contentBg} onChange={(v) => updateSettings({ contentBg: String(v) })} />
+              <Field def={{ key: 'bodyBg', label: 'Outer background', type: 'color' }} value={doc.settings.bodyBg} onChange={(v) => updateSettings({ bodyBg: String(v) })} />
+              <Field def={{ key: 'containerBg', label: 'Content background', type: 'color' }} value={doc.settings.containerBg} onChange={(v) => updateSettings({ containerBg: String(v) })} />
               <Field
                 def={{ key: 'textColor', label: 'Default text colour', type: 'color' }}
                 value={doc.settings.textColor ?? '#333333'}
@@ -253,9 +253,9 @@ export function PropertiesPanel() {
         <BlockPanel
           key={block.id}
           block={block}
-          onProp={(key, v) => updateProps(block.id, { [key]: v })}
-          onDelete={() => removeBlock(block.id)}
-          onDuplicate={() => duplicateBlock(block.id)}
+          updateProps={updateProps}
+          removeBlock={removeBlock}
+          duplicateBlock={duplicateBlock}
         />
       )}
     </aside>
@@ -264,127 +264,63 @@ export function PropertiesPanel() {
 
 function BlockPanel({
   block,
-  onProp,
-  onDelete,
-  onDuplicate,
+  updateProps,
+  removeBlock,
+  duplicateBlock,
 }: {
   block: Block
-  onProp: (key: string, v: unknown) => void
-  onDelete: () => void
-  onDuplicate: () => void
+  updateProps: ReturnType<typeof useEditor>['updateProps']
+  removeBlock: ReturnType<typeof useEditor>['removeBlock']
+  duplicateBlock: ReturnType<typeof useEditor>['duplicateBlock']
 }) {
   const def = REGISTRY[block.type]
+  const { saveAsComponent } = useComponents()
+
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{def.label}</h2>
-        <div className="flex items-center gap-1">
+        <div className="flex gap-1">
           <button
-            onClick={onDuplicate}
+            type="button"
             title="Duplicate block"
-            className="rounded-lg p-1.5 text-ink-600 transition hover:bg-ice-100"
+            onClick={() => duplicateBlock(block.id)}
+            className="rounded p-1 text-ink-400 transition hover:bg-ice-50 hover:text-ink-700"
           >
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" />
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
           </button>
           <button
-            onClick={onDelete}
-            title="Delete block"
-            className="rounded-lg p-1.5 text-ink-600 transition hover:bg-red-50 hover:text-red-600"
+            type="button"
+            title="Save as component"
+            onClick={async () => {
+              const name = window.prompt('Component name?')
+              if (!name) return
+              const html = blockToComponentHtml(block)
+              await saveAsComponent(name, html)
+            }}
+            className="rounded p-1 text-ink-400 transition hover:bg-ice-50 hover:text-ink-700"
           >
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
+          </button>
+          <button
+            type="button"
+            title="Delete block"
+            onClick={() => removeBlock(block.id)}
+            className="rounded p-1 text-ink-400 transition hover:bg-red-50 hover:text-red-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" /></svg>
           </button>
         </div>
       </div>
-      {block.type === 'twocol' && <TwoColPanel block={block} onProp={onProp} />}
-      {block.type !== 'twocol' &&
-        def.fields.map((f) => (
-          <Field key={f.key} def={f} value={(block.props as unknown as Record<string, unknown>)[f.key]} onChange={(v) => onProp(f.key, v)} />
-        ))}
-      <SaveAsComponent block={block} />
-    </div>
-  )
-}
 
-function SaveAsComponent({ block }: { block: Block }) {
-  const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const loadComponents = useComponents((s) => s.load)
-
-  const save = async () => {
-    setError(null)
-    try {
-      await api.post('/api/components', {
-        name: name.trim() || `${REGISTRY[block.type].label} component`,
-        category: REGISTRY[block.type].category,
-        html_template: blockToComponentHtml(block),
-      })
-      await loadComponents()
-      setOpen(false)
-      setName('')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save component')
-    }
-  }
-
-  return (
-    <div className="border-t border-ice-100 pt-3">
-      {!open ? (
-        <button
-          onClick={() => setOpen(true)}
-          className="w-full rounded-lg border border-ice-200 px-3 py-2 text-xs font-medium text-ink-600 transition hover:border-primary hover:text-primary"
-        >
-          Save as component
-        </button>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void save()
-              if (e.key === 'Escape') setOpen(false)
-            }}
-            placeholder="Component name"
-            className="w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
-          />
-          {error && <p className="text-[11px] text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            <button
-              onClick={() => void save()}
-              className="flex-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-dark"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => setOpen(false)}
-              className="flex-1 rounded-lg border border-ice-200 px-3 py-1.5 text-xs font-medium text-ink-600 transition hover:bg-ice-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function TwoColPanel({ block, onProp }: { block: Block & { type: 'twocol' }; onProp: (key: string, v: unknown) => void }) {
-  const def = REGISTRY.twocol
-  return (
-    <>
-      <p className="rounded-lg bg-ice-50 px-3 py-2 text-[11px] leading-relaxed text-ink-600">
-        Drop content blocks into either column on the canvas. Columns stack on mobile automatically.
-      </p>
       {def.fields.map((f) => (
-        <Field key={f.key} def={f} value={(block.props as unknown as Record<string, unknown>)[f.key]} onChange={(v) => onProp(f.key, v)} />
+        <Field
+          key={f.key}
+          def={f}
+          value={(block.props as Record<string, unknown>)[f.key]}
+          onChange={(v) => updateProps(block.id, { [f.key]: v })}
+        />
       ))}
-    </>
+    </div>
   )
 }

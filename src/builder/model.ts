@@ -26,8 +26,10 @@ export interface EmailDocSettings {
   subject: string
   preheader: string
   contentWidth: number
-  outerBg: string
-  contentBg: string
+  /** Outer page background (was outerBg) */
+  bodyBg: string
+  /** Email container background (was contentBg) */
+  containerBg: string
   /** Default font stack inherited by blocks that don't override */
   fontFamily: string
   /** Default text colour inherited by blocks that don't override */
@@ -116,6 +118,7 @@ export interface SocialProps extends CommonBlockProps {
   fontSize: number
   fontFamily: string
   paddingY: number
+  paddingX: number
 }
 
 export interface TwoColProps extends CommonBlockProps {
@@ -149,6 +152,7 @@ export interface FooterProps extends CommonBlockProps {
   align: Align
   bgColor: string
   paddingY: number
+  paddingX: number
 }
 
 export interface RawProps {
@@ -207,8 +211,8 @@ export const DEFAULT_SETTINGS: EmailDocSettings = {
   subject: '',
   preheader: '',
   contentWidth: 600,
-  outerBg: '#f4f8fc',
-  contentBg: '#ffffff',
+  bodyBg: '#f4f8fc',
+  containerBg: '#ffffff',
   fontFamily: DEFAULT_FONT,
   textColor: DEFAULT_TEXT_COLOR,
   linkColor: DEFAULT_LINK_COLOR,
@@ -272,21 +276,45 @@ export function allBlocks(doc: EmailDoc): Block[] {
 
 /**
  * Migrate a doc loaded from the API that may be missing newer fields.
+ * Handles:
+ *  - outerBg → bodyBg  (5-C rename)
+ *  - contentBg → containerBg  (5-C rename)
+ *  - back-fills fontFamily / textColor / linkColor on settings
+ *  - back-fills blockBg / blockRadius on every block
+ *  - back-fills paddingX on footer / social blocks that lacked it
  * Safe to call on already-current docs.
  */
 export function migrateDoc(raw: unknown): EmailDoc {
   const doc = raw as EmailDoc
-  // Settings migration: back-fill new fields
-  const s = doc.settings as Partial<EmailDocSettings>
-  if (!s.fontFamily) s.fontFamily = DEFAULT_FONT
-  if (!s.textColor) s.textColor = DEFAULT_TEXT_COLOR
-  if (!s.linkColor) s.linkColor = DEFAULT_LINK_COLOR
-  // Block migration: back-fill blockBg / blockRadius on all blocks
+  const s = doc.settings as Record<string, unknown>
+
+  // 5-C: rename outerBg → bodyBg
+  if (s['outerBg'] !== undefined && s['bodyBg'] === undefined) {
+    s['bodyBg'] = s['outerBg']
+  }
+  if (s['bodyBg'] === undefined) s['bodyBg'] = '#f4f8fc'
+
+  // 5-C: rename contentBg → containerBg
+  if (s['contentBg'] !== undefined && s['containerBg'] === undefined) {
+    s['containerBg'] = s['contentBg']
+  }
+  if (s['containerBg'] === undefined) s['containerBg'] = '#ffffff'
+
+  // Global typography defaults
+  if (!s['fontFamily']) s['fontFamily'] = DEFAULT_FONT
+  if (!s['textColor']) s['textColor'] = DEFAULT_TEXT_COLOR
+  if (!s['linkColor']) s['linkColor'] = DEFAULT_LINK_COLOR
+
+  // Block field back-fills
   const migrate = (blocks: Block[]): void => {
     for (const b of blocks) {
       const p = b.props as Record<string, unknown>
       if (p['blockBg'] === undefined) p['blockBg'] = 'transparent'
       if (p['blockRadius'] === undefined) p['blockRadius'] = 0
+      // 5-B: paddingX on footer + social
+      if ((b.type === 'footer' || b.type === 'social') && p['paddingX'] === undefined) {
+        p['paddingX'] = 24
+      }
       if (b.type === 'twocol') {
         migrate(b.columns[0])
         migrate(b.columns[1])
