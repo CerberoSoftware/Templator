@@ -7,7 +7,6 @@ import { findBlock } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
 import { useComponents } from '../../stores/components'
 import { useFonts, fontOptions } from '../../stores/fonts'
-import { api } from '../../api/client'
 import { blockToComponentHtml } from '../../builder/componentCodec'
 import { AssetPickerDialog } from './AssetPickerDialog'
 import { SOCIAL_PLATFORMS } from '../../builder/blocks/social'
@@ -136,7 +135,6 @@ function SocialLinksField({ value, onChange }: { value: SocialLink[]; onChange: 
 
   const remove = (index: number) => onChange(links.filter((_, i) => i !== index))
 
-  // Simple drag-to-reorder via mouse events
   const [dragIdx, setDragIdx] = useState<number | null>(null)
 
   const onDragStart = (i: number) => setDragIdx(i)
@@ -361,7 +359,26 @@ function BlockPanel({
   duplicateBlock: ReturnType<typeof useEditor>['duplicateBlock']
 }) {
   const def = REGISTRY[block.type]
-  const { saveAsComponent } = useComponents()
+  const saveAsComponent = useComponents((s) => s.saveAsComponent)
+  const [saving, setSaving] = useState(false)
+  const [savedName, setSavedName] = useState<string | null>(null)
+
+  const handleSaveAsComponent = async () => {
+    const name = window.prompt('Component name?')
+    if (!name?.trim()) return
+    setSaving(true)
+    try {
+      const html = blockToComponentHtml(block)
+      await saveAsComponent(name.trim(), html)
+      setSavedName(name.trim())
+      // Clear the "saved" badge after 3 s
+      setTimeout(() => setSavedName(null), 3000)
+    } catch (err) {
+      window.alert(`Failed to save component: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3 p-4">
@@ -378,14 +395,10 @@ function BlockPanel({
           </button>
           <button
             type="button"
-            title="Save as component"
-            onClick={async () => {
-              const name = window.prompt('Component name?')
-              if (!name) return
-              const html = blockToComponentHtml(block)
-              await saveAsComponent(name, html)
-            }}
-            className="rounded p-1 text-ink-400 transition hover:bg-ice-50 hover:text-ink-700"
+            title={saving ? 'Saving…' : 'Save as component'}
+            disabled={saving}
+            onClick={() => void handleSaveAsComponent()}
+            className="rounded p-1 text-ink-400 transition hover:bg-ice-50 hover:text-ink-700 disabled:opacity-50"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
           </button>
@@ -399,6 +412,12 @@ function BlockPanel({
           </button>
         </div>
       </div>
+
+      {savedName !== null && (
+        <div className="rounded-lg bg-green-50 px-3 py-2 text-[11px] font-medium text-green-700">
+          ✓ "{savedName}" saved to My components
+        </div>
+      )}
 
       {def.fields.map((f) => (
         <Field
