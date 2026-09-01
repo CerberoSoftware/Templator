@@ -21,15 +21,14 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# CONFIGURATION — edit these three values before first run
+# CONFIGURATION — edit GITHUB_PAT before first run (never commit a real token)
 # ---------------------------------------------------------------------------
-GITHUB_PAT="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"
+GITHUB_PAT="${GITHUB_PAT:-YOUR_PAT_HERE}"
 GITHUB_USER="CerberoUK"
 REPO="CerberoSoftware/eTemplator"
 
 # Absolute path to the app webroot on SiteGround
-# e.g. /home/customer/www/etemplator.yourdomain.com/public_html
-DEPLOY_DIR="/home/customer/www/etemplator.yourdomain.com/public_html"
+DEPLOY_DIR="/home/u1024-ybd75ecffzqg/www/etemplator.cerbero.co/public_html"
 
 # PHP binary — SiteGround typically exposes php8.2 or php8.3
 PHP_BIN="${SG_PHP:-php8.2}"
@@ -49,12 +48,18 @@ for arg in "$@"; do
   esac
 done
 
+# ---------------------------------------------------------------------------
+# Clone into $HOME/deploy-build (NOT /tmp — SiteGround mounts /tmp noexec so
+# node_modules/.bin/* cannot be executed from there)
+# ---------------------------------------------------------------------------
+BUILD_DIR="$HOME/deploy-build-$$"
+trap 'rm -rf "$BUILD_DIR"' EXIT
+mkdir -p "$BUILD_DIR"
+
 CLONE_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/${REPO}.git"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
 
 echo "==> Cloning ${REPO} (branch: ${BRANCH})"
-git clone --depth=1 --branch "$BRANCH" "$CLONE_URL" "$TMP_DIR"
+git clone --depth=1 --branch "$BRANCH" "$CLONE_URL" "$BUILD_DIR"
 
 # ---------------------------------------------------------------------------
 # Build frontend
@@ -68,14 +73,17 @@ if [[ $SKIP_BUILD -eq 0 ]]; then
     source "$NVM_DIR/nvm.sh"
   fi
 
-  cd "$TMP_DIR"
+  cd "$BUILD_DIR"
   npm install --prefer-offline --no-audit --no-fund
 
   echo "==> Building frontend (tsc + vite)"
-  npm run build
+  # Invoke via `node` explicitly — avoids noexec issues on /tmp or restricted
+  # filesystems where the shebang-based .bin/* wrappers are blocked.
+  node node_modules/.bin/tsc --noEmit
+  node node_modules/.bin/vite build
 else
   echo "==> Skipping frontend build (--skip-build)"
-  cd "$TMP_DIR"
+  cd "$BUILD_DIR"
 fi
 
 # ---------------------------------------------------------------------------
@@ -97,7 +105,7 @@ rsync -a --delete \
   --exclude '.DS_Store' \
   --exclude 'public/uploads/' \
   --exclude 'app/config.php' \
-  "$TMP_DIR/" "$DEPLOY_DIR/"
+  "$BUILD_DIR/" "$DEPLOY_DIR/"
 
 # Ensure writable uploads directory exists
 mkdir -p "${DEPLOY_DIR}/public/uploads"
@@ -112,4 +120,4 @@ fi
 
 echo
 echo "==> Deploy complete."
-echo "    Smoke-test: curl -s https://yourdomain.com/api/health"
+echo "    Smoke-test: curl -s https://etemplator.cerbero.co/api/health"
