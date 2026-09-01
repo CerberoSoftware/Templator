@@ -161,26 +161,28 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     const iframe = iframeRef.current
     const idoc = iframe?.contentDocument
     if (!idoc || !iframe) return
-    // All rects stored relative to the iframe's own top-left so that
-    // resolveTarget (which subtracts iframeRect from clientX/Y) uses the
-    // same coordinate space as the overlay divs.
-    const iframeOrigin = iframe.getBoundingClientRect()
+    // Use the iframe document's own viewport as origin so rects are
+    // iframe-local. Subtracting documentElement (same window as blocks)
+    // works both when getBoundingClientRect is iframe-viewport (0-based)
+    // and when it is parent-viewport (iframeOrigin) — the delta cancels.
+    const rootRect = idoc.documentElement.getBoundingClientRect()
+    const origin = { left: rootRect.left, top: rootRect.top }
     const nextBlocks: BlockRect[] = []
     idoc.querySelectorAll<HTMLElement>('[data-et-block]').forEach((el) => {
       const id = el.getAttribute('data-et-block')
-      if (id != null) nextBlocks.push({ id, rect: rectOf(el, iframeOrigin) })
+      if (id != null) nextBlocks.push({ id, rect: rectOf(el, origin) })
     })
     const nextCols: Array<{ id: string; column: 0 | 1; rect: Rect }> = []
     idoc.querySelectorAll<HTMLElement>('[data-et-col]').forEach((el) => {
       const key = el.getAttribute('data-et-col')
       if (!key) return
       const [blockId, colStr] = key.split(':')
-      nextCols.push({ id: blockId, column: colStr === '1' ? 1 : 0, rect: rectOf(el, iframeOrigin) })
+      nextCols.push({ id: blockId, column: colStr === '1' ? 1 : 0, rect: rectOf(el, origin) })
     })
     const content = idoc.querySelector<HTMLElement>('.et-content')
     setBlockRects(nextBlocks)
     setColRects(nextCols)
-    setContentRect(content ? rectOf(content, iframeOrigin) : null)
+    setContentRect(content ? rectOf(content, origin) : null)
     setDocHeight(Math.max(420, idoc.documentElement.scrollHeight))
   }, [])
 

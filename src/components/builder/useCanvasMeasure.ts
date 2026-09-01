@@ -30,7 +30,8 @@ export function useCanvasMeasure(
     const iframe = iframeRef.current
     const idoc = iframe?.contentDocument
     if (!idoc || !iframe) return
-    const origin = iframe.getBoundingClientRect()
+    const rootRect = idoc.documentElement.getBoundingClientRect()
+    const origin = { left: rootRect.left, top: rootRect.top }
     const nextBlocks: BlockRect[] = []
     idoc.querySelectorAll<HTMLElement>('[data-et-block]').forEach((el) => {
       const id = el.getAttribute('data-et-block')
