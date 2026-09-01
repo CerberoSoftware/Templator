@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { FilePlus2, LogOut, Pencil, Snowflake, Trash2 } from 'lucide-react'
+import { FilePlus2, LogOut, Pencil, Snowflake, Trash2, Zap } from 'lucide-react'
 import { api } from '../api/client'
 import { formatDateTime } from '../lib/utils'
 import { navigate } from '../router'
 import { useAuth } from '../stores/auth'
+import { QuickstartTab } from '../components/QuickstartTab'
 
 interface TemplateRow {
   id: number
@@ -13,12 +14,15 @@ interface TemplateRow {
   version_count: number
 }
 
+type Tab = 'my-templates' | 'quickstart'
+
 export default function TemplateList() {
   const logout = useAuth((s) => s.logout)
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<TemplateRow | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [tab, setTab] = useState<Tab>('my-templates')
 
   const load = async () => {
     try {
@@ -89,76 +93,108 @@ export default function TemplateList() {
             <h1 className="text-2xl font-bold tracking-tight">Templates</h1>
             <p className="mt-1 text-sm text-ink-600">Build and export highly compatible email templates.</p>
           </div>
+          {tab === 'my-templates' && (
+            <button
+              onClick={() => void createTemplate()}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-dark"
+            >
+              <FilePlus2 className="size-4" />
+              New template
+            </button>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex gap-1 rounded-xl border border-ice-200 bg-ice-50 p-1">
           <button
-            onClick={() => void createTemplate()}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-dark"
+            onClick={() => setTab('my-templates')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              tab === 'my-templates' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'
+            }`}
           >
-            <FilePlus2 className="size-4" />
-            New template
+            <Snowflake className="size-4" />
+            My Templates
+          </button>
+          <button
+            onClick={() => setTab('quickstart')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              tab === 'quickstart' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-900'
+            }`}
+          >
+            <Zap className="size-4" />
+            Quickstart
           </button>
         </div>
 
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        {templates === null ? (
-          <p className="py-16 text-center text-sm text-ink-400">Loading…</p>
-        ) : templates.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-ice-200 bg-white py-16 text-center">
-            <Snowflake className="mx-auto mb-3 size-8 text-ice-300" />
-            <p className="font-medium">No templates yet</p>
-            <p className="mt-1 text-sm text-ink-600">Create your first template to get started.</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-ice-100 overflow-hidden rounded-2xl border border-ice-200 bg-white">
-            {templates.map((t) => (
-              <li key={t.id} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-ice-50">
-                <button
-                  onClick={() => navigate(`/editor/${t.id}`)}
-                  className="min-w-0 flex-1 text-left"
-                  title="Open in builder"
-                >
-                  {renaming?.id === t.id ? (
-                    <input
-                      value={renameValue}
-                      autoFocus
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={() => void commitRename()}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') void commitRename()
-                        if (e.key === 'Escape') setRenaming(null)
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full rounded border border-primary px-2 py-1 text-sm font-semibold outline-none"
-                    />
-                  ) : (
-                    <p className="truncate font-semibold">{t.name}</p>
-                  )}
-                  <p className="mt-0.5 text-xs text-ink-400">
-                    Updated {formatDateTime(t.updated_at)} · {t.version_count} versions
-                  </p>
-                </button>
-                <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                  <button
-                    onClick={() => {
-                      setRenaming(t)
-                      setRenameValue(t.name)
-                    }}
-                    className="rounded-lg p-2 text-ink-600 transition hover:bg-ice-100"
-                    title="Rename"
-                  >
-                    <Pencil className="size-4" />
-                  </button>
-                  <button
-                    onClick={() => void remove(t)}
-                    className="rounded-lg p-2 text-ink-600 transition hover:bg-red-50 hover:text-red-600"
-                    title="Delete"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+        {tab === 'my-templates' && (
+          <>
+            {templates === null ? (
+              <p className="py-16 text-center text-sm text-ink-400">Loading…</p>
+            ) : templates.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-ice-200 bg-white py-16 text-center">
+                <Snowflake className="mx-auto mb-3 size-8 text-ice-300" />
+                <p className="font-medium">No templates yet</p>
+                <p className="mt-1 text-sm text-ink-600">Create your first template to get started, or pick one from the <button onClick={() => setTab('quickstart')} className="text-primary hover:underline">Quickstart</button> tab.</p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-ice-100 overflow-hidden rounded-2xl border border-ice-200 bg-white">
+                {templates.map((t) => (
+                  <li key={t.id} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-ice-50">
+                    <button
+                      onClick={() => navigate(`/editor/${t.id}`)}
+                      className="min-w-0 flex-1 text-left"
+                      title="Open in builder"
+                    >
+                      {renaming?.id === t.id ? (
+                        <input
+                          value={renameValue}
+                          autoFocus
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => void commitRename()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void commitRename()
+                            if (e.key === 'Escape') setRenaming(null)
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full rounded border border-primary px-2 py-1 text-sm font-semibold outline-none"
+                        />
+                      ) : (
+                        <p className="truncate font-semibold">{t.name}</p>
+                      )}
+                      <p className="mt-0.5 text-xs text-ink-400">
+                        Updated {formatDateTime(t.updated_at)} · {t.version_count} versions
+                      </p>
+                    </button>
+                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                      <button
+                        onClick={() => {
+                          setRenaming(t)
+                          setRenameValue(t.name)
+                        }}
+                        className="rounded-lg p-2 text-ink-600 transition hover:bg-ice-100"
+                        title="Rename"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => void remove(t)}
+                        className="rounded-lg p-2 text-ink-600 transition hover:bg-red-50 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+
+        {tab === 'quickstart' && (
+          <QuickstartTab onCreated={() => { void load(); setTab('my-templates') }} />
         )}
       </main>
     </div>
