@@ -16,8 +16,8 @@ RewriteRule ^([^/]+\.(sql|sh|ts|tsx|json|ya?ml|lock|md|html))$ - [F]
 RewriteCond %{REQUEST_URI} !^/index\.php$
 RewriteRule \.php$ - [F]
 
-# Serve /assets/* and /uploads/* from public/ (after block rules)
-RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+# Serve /static/* and /uploads/* from public/ (after block rules)
+RewriteRule ^static/(.*)$ public/static/$1 [L]
 RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
 # Serve existing files/dirs directly
