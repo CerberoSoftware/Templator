@@ -163,10 +163,25 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     useSensor(KeyboardSensor),
   )
 
-  const measure = useCallback(() => {
+  const measure = useCallback(async (): Promise<void> => {
     const iframe = iframeRef.current
     const idoc = iframe?.contentDocument
     if (!idoc || !iframe) return
+    // Wait for fonts to load
+    if (idoc.fonts && idoc.fonts.ready) {
+      await idoc.fonts.ready
+    }
+// Wait for images to load
+    const images = Array.from(idoc.querySelectorAll('img'))
+    await Promise.all(images.map((img) => {
+      if (img.complete) return Promise.resolve()
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve()
+        img.onerror = () => resolve()
+      })
+    }))
+    // Small delay to ensure layout is stable
+    await new Promise((r) => setTimeout(r, 50))
     // Use the iframe document's own viewport as origin so rects are
     // iframe-local. Subtracting documentElement (same window as blocks)
     // works both when getBoundingClientRect is iframe-viewport (0-based)
@@ -189,14 +204,17 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     setBlockRects(nextBlocks)
     setColRects(nextCols)
     setContentRect(content ? rectOf(content, origin) : null)
-    setDocHeight(Math.max(420, idoc.documentElement.scrollHeight))
+    const newHeight = Math.max(420, idoc.documentElement.scrollHeight)
+    setDocHeight(newHeight)
+    // Also update iframe height to match content
+    iframe.style.height = `${newHeight}px`
   }, [])
 
   // Keep rects fresh on resize / content mutation without waiting for doc prop change
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
-    const onResize = () => requestAnimationFrame(measure)
+    const onResize = () => { measure() }
     window.addEventListener('resize', onResize)
     let ro: ResizeObserver | null = null
     let mo: MutationObserver | null = null
@@ -230,7 +248,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
           // Bug 3 fix: call measure() immediately after the iframe loads so
           // block handles are visible on first render without requiring a
           // subsequent doc-change to trigger the effect again.
-          requestAnimationFrame(measure)
+          measure()
         },
         { once: true },
       )
@@ -241,11 +259,11 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     idoc.open()
     idoc.write(renderEmail(doc, { markers: true, canvas: true }))
     idoc.close()
-    requestAnimationFrame(measure)
+    measure()
   }, [doc, ready, measure])
 
   useEffect(() => {
-    requestAnimationFrame(measure)
+    measure()
   }, [zoom, measure])
 
   // Auto-scroll newly selected block into view
