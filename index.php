@@ -7,7 +7,7 @@ use Et\Core\Router;
 
 if (PHP_SAPI === 'cli-server') {
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-    if (preg_match('#^/(assets|uploads)/#', $path)) {
+    if (preg_match('#^/(static|uploads)/#', $path)) {
         $file = __DIR__ . '/public' . $path;
         $real = is_file($file) ? realpath($file) : false;
         if ($real !== false && str_starts_with($real, __DIR__ . '/public')) {
@@ -45,14 +45,14 @@ function serve_spa(): void
 {
     $js = null;
     $css = [];
-    $manifestPath = __DIR__ . '/public/assets/.vite/manifest.json';
+    $manifestPath = __DIR__ . '/public/static/.vite/manifest.json';
     if (is_file($manifestPath)) {
         $manifest = json_decode((string) file_get_contents($manifestPath), true) ?: [];
         $entry = $manifest['index.html'] ?? null;
         if (is_array($entry) && isset($entry['file'])) {
-            $js = '/assets/' . $entry['file'];
+            $js = '/static/' . $entry['file'];
             foreach ($entry['css'] ?? [] as $file) {
-                $css[] = '/assets/' . $file;
+                $css[] = '/static/' . $file;
             }
         }
     }
