@@ -2,15 +2,39 @@ import type { EmailDoc } from './model'
 import { makeRenderCtx, renderBlock } from './blocks'
 import { esc } from './htmlUtils'
 
+/** Viewport below which the email collapses to a single column. */
+export const MOBILE_BREAKPOINT = 620
+
+/**
+ * Rules that apply at every viewport. Safe to emit everywhere, including the
+ * Design canvas.
+ */
 export const BASE_STYLES = `
     .et-p { margin: 0 0 12px; }
     .et-last { margin-bottom: 0; }
     .et-h { margin: 0; }
     .et-col { border-collapse: collapse; }
     .stack { display: inline-block; vertical-align: top; }
-    @media only screen and (max-width: 620px) {
+`
+
+/**
+ * Mobile rules — deliberately NOT emitted in canvas mode.
+ *
+ * The Design canvas iframe is exactly `settings.contentWidth` wide (600px by
+ * default), which is *below* MOBILE_BREAKPOINT, so every rule in here used to
+ * fire while the user was editing and collapse "Two columns" and
+ * "Image + Text" into stacked rows. Counter-rules in CANVAS_STYLES could not
+ * win reliably against these `!important` declarations, so canvas mode now
+ * omits the whole block instead. Export, the Code panel and the Preview pane
+ * (which renders a real 375px frame) still get it verbatim.
+ */
+export const RESPONSIVE_STYLES = `
+    @media only screen and (max-width: ${MOBILE_BREAKPOINT}px) {
       .et-content { width: 100% !important; max-width: 100% !important; }
-      .et-col { width: 100% !important; max-width: 100% !important; display: block !important; }
+      .et-col { width: 100% !important; max-width: 100% !important; display: block !important; float: none !important; }
+      .et-imgtext-img, .et-imgtext-text { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
+      /* Fixed gap: an !important rule in a shared <style> cannot read props.gap. */
+      .et-imgtext-first { padding-bottom: 16px !important; }
       .et-btn-full { width: 100% !important; }
       .et-outer-td { padding: 12px 8px !important; }
       .stack { display: block !important; width: 100% !important; }
@@ -25,9 +49,11 @@ export interface RenderOptions {
 export const CANVAS_STYLES = `
     .et-col-blocks { min-height: 56px; }
     .et-raw:empty::before { content: 'Raw HTML block'; color: #8aa0b8; font-family: Arial, sans-serif; font-size: 13px; }
-    /* Cancel any @media stacking — canvas preview is always desktop width */
-    .stack:not(.et-imgtext-img):not(.et-imgtext-text) { display: inline-block !important; vertical-align: top !important; width: auto !important; }
-    .et-col { display: table-cell !important; }
+    /* The canvas iframe is exactly contentWidth wide, so drop the outer gutter:
+       the content table then fills the frame edge to edge and the drag/select
+       overlay lines up with what the user sees. */
+    html { overflow-y: hidden; }
+    .et-outer-td { padding: 0 !important; }
 `
 
 /**
@@ -52,6 +78,9 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
       ? `  <div class="et-preheader" style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(settings.preheader)}${'&#160;'.repeat(40)}</div>\n`
       : ''
   const canvasStyle = canvas ? `  <style>${CANVAS_STYLES}</style>\n` : ''
+  // Canvas mode is always desktop: omit the mobile rules entirely rather than
+  // fighting them with counter-!important declarations.
+  const responsiveStyles = canvas ? '' : RESPONSIVE_STYLES
   // Sanitise user-controlled settings values before injecting into <style>.
   const safeLinkColor = safeCssValue(settings.linkColor ?? '#2b7fe0')
   const safeTextColor = safeCssValue(settings.textColor ?? '#333333')
@@ -66,7 +95,7 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${esc(settings.subject)}</title>
-  <style>${BASE_STYLES}
+  <style>${BASE_STYLES}${responsiveStyles}
   ${globalStyles}</style>
   <!--[if mso]>
   <xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsToTheInch>96</o:PixelsToTheInch></o:OfficeDocumentSettings></xml>

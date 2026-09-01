@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EmailDoc } from '../src/builder/model'
 import { DEFAULT_FONT } from '../src/builder/model'
-import { renderEmail } from '../src/builder/render'
+import { BASE_STYLES, CANVAS_STYLES, MOBILE_BREAKPOINT, RESPONSIVE_STYLES, renderEmail } from '../src/builder/render'
 
 export function sampleDoc(): EmailDoc {
   return {
@@ -242,5 +242,42 @@ describe('renderEmail', () => {
     expect(html).toContain('<strong>bold</strong>')
     expect(html).toContain('<a href="https://example.com/go" class="et-link"')
     expect(html).toContain('Second paragraph after a blank line.')
+  })
+})
+
+describe('canvas mode stylesheet', () => {
+  it('omits the mobile breakpoint so the design canvas never stacks columns', () => {
+    // The canvas iframe is exactly contentWidth wide (600 < 620), so shipping
+    // the mobile @media block would collapse every multi-column block while
+    // the user is editing.
+    const html = renderEmail(sampleDoc(), { markers: true, canvas: true })
+    expect(html).not.toContain('@media')
+    expect(html).not.toMatch(/\.et-col[^}]*display:\s*block/)
+    expect(html).toContain('.et-col-blocks')
+    expect(html).toContain('.et-outer-td { padding: 0 !important; }')
+  })
+
+  it('keeps the mobile breakpoint for export, preview and the code panel', () => {
+    const html = renderEmail(sampleDoc())
+    expect(html).toContain('@media only screen and (max-width: 620px)')
+    expect(html).toMatch(/\.et-col[^}]*display:\s*block/)
+    expect(html).not.toContain('.et-col-blocks')
+  })
+
+  it('keeps the responsive rules out of the always-emitted constant', () => {
+    expect(BASE_STYLES).not.toContain('@media')
+    expect(RESPONSIVE_STYLES).toContain(`max-width: ${MOBILE_BREAKPOINT}px`)
+    // Regression guard: the old counter-!important hacks are gone for good.
+    expect(CANVAS_STYLES).not.toContain('display: table-cell !important')
+    expect(CANVAS_STYLES).not.toContain('.stack')
+  })
+
+  it('leaves the two columns at their configured widths in canvas mode', () => {
+    const html = renderEmail(sampleDoc(), { markers: true, canvas: true })
+    const dom = new DOMParser().parseFromString(html, 'text/html')
+    const col1 = dom.querySelector('table.et-col1')
+    expect(col1?.getAttribute('width')).toBe('50%')
+    expect(col1?.getAttribute('align')).toBe('left')
+    expect(col1?.getAttribute('style')).toContain('width:50%;max-width:50%')
   })
 })
