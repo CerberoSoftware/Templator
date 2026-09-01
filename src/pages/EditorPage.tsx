@@ -55,6 +55,11 @@ export default function EditorPage({ id }: { id: number }) {
   const canRedo = useEditor((s) => s.future.length > 0)
   const loadFonts = useFonts((s) => s.load)
   const [error, setError] = useState<string | null>(null)
+  // Fix: track hard load failures separately from non-fatal error messages.
+  // A brand-new template legitimately has 0 blocks and an empty name, so
+  // gating the error screen on those conditions would block the editor UI
+  // for every new template.
+  const [loadFailed, setLoadFailed] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>('design')
   const [showVersions, setShowVersions] = useState(false)
@@ -81,7 +86,10 @@ export default function EditorPage({ id }: { id: number }) {
         }
         load(t.id, t.name, parsed)
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load template'))
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : 'Failed to load template')
+        setLoadFailed(true)
+      })
   }, [id, load])
 
   const save = useCallback(async () => {
@@ -155,7 +163,9 @@ export default function EditorPage({ id }: { id: number }) {
     [insertBlock, moveBlock, insertBlocks],
   )
 
-  if (error && doc.blocks.length === 0 && templateName === '') {
+  // Only show the hard error screen when the API call itself failed (404, 500,
+  // network error, etc.) — not for a legitimately empty or malformed-JSON doc.
+  if (loadFailed) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
         <p className="font-medium text-red-600">{error}</p>
@@ -252,6 +262,11 @@ export default function EditorPage({ id }: { id: number }) {
           Save
         </button>
       </header>
+      {error && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-sm text-amber-800">
+          {error}
+        </div>
+      )}
       <div className="flex min-h-0 flex-1">
         {mode === 'design' && (
           <>

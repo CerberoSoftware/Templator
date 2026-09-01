@@ -82,7 +82,12 @@ export const twoColDef: BlockDef = {
     const inner1 = col1.querySelector('td.et-col-inner') as HTMLElement | null
     const inner2 = col2.querySelector('td.et-col-inner') as HTMLElement | null
     const st = styleOf(td)
-    const gap = Math.round(px(inner1?.style.paddingRight ?? '', 8) + px(inner2?.style.paddingLeft ?? '', 8))
+    // Fix: use styleOf() helper instead of direct .style access so that the
+    // style is read through HTMLElement in a consistent, type-safe way.
+    const gap = Math.round(
+      px(inner1 ? styleOf(inner1).paddingRight : '', 8) +
+      px(inner2 ? styleOf(inner2).paddingLeft : '', 8),
+    )
     const parseColumn = (col: Element): Block[] => {
       const blocksTable = col.querySelector('table.et-col-blocks')
       if (!blocksTable) return []
@@ -100,9 +105,6 @@ export const twoColDef: BlockDef = {
       paddingX: px(st.paddingLeft, 24),
       blockBg: 'transparent',
       blockRadius: 0,
-      // Minor fix: widthPct was missing from parse() return, violating the
-      // CommonBlockProps contract and causing TypeScript to accept an
-      // under-specified object at runtime.
       widthPct: 100,
       columns: [parseColumn(col1), parseColumn(col2)],
     }

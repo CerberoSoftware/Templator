@@ -88,6 +88,7 @@ export const buttonDef: BlockDef = {
       paddingX: px(tdSt.paddingLeft, 24),
       blockBg: 'transparent',
       blockRadius: 0,
+      widthPct: 100,
     } satisfies ButtonProps
   },
 }

@@ -68,6 +68,7 @@ export const textDef: BlockDef = {
       paddingX: px(st.paddingLeft, 24),
       blockBg: 'transparent',
       blockRadius: 0,
+      widthPct: 100,
     } satisfies TextProps
   },
 }

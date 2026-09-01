@@ -31,6 +31,7 @@ export const spacerDef: BlockDef = {
       bg: st.backgroundColor || 'transparent',
       blockBg: 'transparent',
       blockRadius: 0,
+      widthPct: 100,
     } satisfies SpacerProps
   },
 }

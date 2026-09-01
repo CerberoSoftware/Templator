@@ -51,12 +51,19 @@ export function inlineCss(html: string): string {
     }
   }
 
+  // Fix: consolidate all <style> tags into a single one to prevent duplicate
+  // media queries and residual rules when multiple <style> elements exist.
   const keptCss = [...parsed.mediaBlocks, ...parsed.residualRules].join('\n')
-  for (const tag of styleTags) {
+  if (styleTags.length > 0) {
+    const first = styleTags[0]
     if (keptCss.trim() === '') {
-      tag.remove()
+      first.remove()
     } else {
-      tag.textContent = keptCss
+      first.textContent = keptCss
+    }
+    // Remove all remaining style tags beyond the first
+    for (let i = 1; i < styleTags.length; i++) {
+      styleTags[i].remove()
     }
   }
 

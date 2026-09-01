@@ -30,6 +30,17 @@ export const CANVAS_STYLES = `
     .et-col { display: table-cell !important; }
 `
 
+/**
+ * Sanitise a value before injecting it into a CSS string inside a <style> tag.
+ * Strips characters that could break out of a CSS declaration or property value
+ * and end/re-open a <style> block (XSS vector).
+ */
+function safeCssValue(value: string): string {
+  // Remove any occurrence of '<', '>', '{', '}' and HTML-special sequences
+  // that could terminate a <style> block or inject new rules.
+  return value.replace(/[<>{}]/g, '')
+}
+
 export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   const markers = opts.markers ?? false
   const canvas = opts.canvas ?? false
@@ -41,8 +52,11 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
       ? `  <div class="et-preheader" style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(settings.preheader)}${'&#160;'.repeat(40)}</div>\n`
       : ''
   const canvasStyle = canvas ? `  <style>${CANVAS_STYLES}</style>\n` : ''
-  // Global link + text colour + font from settings
-  const globalStyles = `a { color: ${settings.linkColor ?? '#2b7fe0'}; } body { color: ${settings.textColor ?? '#333333'}; font-family: ${settings.fontFamily ?? 'Arial, Helvetica, sans-serif'}; }`
+  // Sanitise user-controlled settings values before injecting into <style>.
+  const safeLinkColor = safeCssValue(settings.linkColor ?? '#2b7fe0')
+  const safeTextColor = safeCssValue(settings.textColor ?? '#333333')
+  const safeFontFamily = safeCssValue(settings.fontFamily ?? 'Arial, Helvetica, sans-serif')
+  const globalStyles = `a { color: ${safeLinkColor}; } body { color: ${safeTextColor}; font-family: ${safeFontFamily}; }`
   const bodyBg = settings.bodyBg ?? '#f4f8fc'
   const containerBg = settings.containerBg ?? '#ffffff'
   return `<!DOCTYPE html>
@@ -52,7 +66,8 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${esc(settings.subject)}</title>
-  <style>${BASE_STYLES}  ${globalStyles}</style>
+  <style>${BASE_STYLES}
+  ${globalStyles}</style>
   <!--[if mso]>
   <xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsToTheInch>96</o:PixelsToTheInch></o:OfficeDocumentSettings></xml>
   <![endif]-->

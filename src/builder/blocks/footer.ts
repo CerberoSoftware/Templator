@@ -8,7 +8,7 @@ export const footerDef: BlockDef = {
   label: 'Footer',
   category: 'Structure',
   fields: [
-    { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Company address, unsubscribe link\u2026', help: 'Use {{unsubscribe_url}} or other merge tags where needed.' },
+    { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Company address, unsubscribe link…', help: 'Use {{unsubscribe_url}} or other merge tags where needed.' },
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 16, step: 1, unit: 'px' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
@@ -57,6 +57,7 @@ export const footerDef: BlockDef = {
       paddingX: paddingX(paddingShorthand, 24),
       blockBg: 'transparent',
       blockRadius: 0,
+      widthPct: 100,
     } satisfies FooterProps
   },
 }
