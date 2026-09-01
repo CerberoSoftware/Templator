@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
+import { DndContext, DragOverlay, PointerSensor, useDraggable, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
+import { GripVertical } from 'lucide-react'
 import { renderEmail } from '../../builder/render'
 import { type EmailDoc, type BlockType, findBlock } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
@@ -48,6 +49,72 @@ function rectOf(el: HTMLElement): Rect {
 
 function inside(r: Rect, x: number, y: number): boolean {
   return x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height
+}
+
+/** Drag handle overlay for an existing block */
+function BlockHandle({
+  id,
+  rect,
+  isSelected,
+  isHovered,
+  isAnyActive,
+  onSelect,
+  onHover,
+}: {
+  id: string
+  rect: Rect
+  isSelected: boolean
+  isHovered: boolean
+  isAnyActive: boolean
+  onSelect: (id: string) => void
+  onHover: (id: string | null) => void
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `move-${id}`,
+    data: { kind: 'move', id } satisfies ActiveDrag,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-et-drop-id={id}
+      className={`absolute box-border rounded-[3px] ${
+        isSelected
+          ? 'outline outline-2 outline-primary'
+          : isHovered
+            ? 'outline outline-1 outline-secondary'
+            : ''
+      } ${isDragging ? 'opacity-30' : ''}`}
+      style={{
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: Math.max(rect.height, 6),
+        pointerEvents: isAnyActive && !isDragging ? 'none' : 'auto',
+        cursor: isDragging ? 'grabbing' : 'default',
+      }}
+      onPointerOver={() => onHover(id)}
+      onPointerOut={() => onHover(null)}
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect(id)
+      }}
+    >
+      {/* Drag handle — visible on hover/select */}
+      {(isHovered || isSelected) && !isAnyActive && (
+        <div
+          {...listeners}
+          {...attributes}
+          className="absolute -left-5 top-1/2 flex -translate-y-1/2 cursor-grab items-center justify-center rounded-sm p-0.5 text-ink-400 hover:text-primary active:cursor-grabbing"
+          style={{ pointerEvents: 'auto' }}
+          onClick={(e) => e.stopPropagation()}
+          title="Drag to reorder"
+        >
+          <GripVertical className="size-3.5" />
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function Canvas({ onSelect, onDrop }: CanvasProps) {
@@ -220,45 +287,40 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
         : active.name
     : ''
 
+  // Canvas surround colour matches the email's outer background
+  const canvasBg = doc.settings.bodyBg ?? '#f4f8fc'
+
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => { setActive(null); setDropTarget(null) }}>
       <Palette />
-      <div className="flex flex-1 justify-center overflow-y-auto bg-ice-100" id="et-canvas-scroll" onClick={() => onSelect(null)}>
-        <div className="relative my-6" style={{ width: doc.settings.contentWidth, height: docHeight }}>
+      <div
+        className="flex flex-1 justify-center overflow-y-auto"
+        style={{ backgroundColor: canvasBg }}
+        id="et-canvas-scroll"
+        onClick={() => onSelect(null)}
+      >
+        <div className="relative my-6" style={{ width: doc.settings.contentWidth + 48, height: docHeight }}>
           <iframe
             ref={iframeRef}
             title="Email canvas"
             srcDoc={ready ? undefined : renderEmail(doc, { markers: true, canvas: true })}
-            className="absolute left-0 top-0 h-full w-full border-0 bg-white shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
-            style={{ height: docHeight }}
+            className="absolute left-6 top-0 h-full border-0 shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
+            style={{ width: doc.settings.contentWidth, height: docHeight, backgroundColor: '#ffffff' }}
           />
           {ready && (
             <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
-              {blockRects.map(({ id, rect }) => {
-                const isSel = id === selectedId
-                const isHover = id === hoverId
-                return (
-                  <div
-                    key={id}
-                    data-et-drop-id={id}
-                    className={`absolute box-border rounded-[3px] ${isSel ? 'outline-2 outline-primary outline' : isHover ? 'outline-1 outline-secondary outline' : ''}`}
-                    style={{
-                      top: rect.top,
-                      left: rect.left,
-                      width: rect.width,
-                      height: Math.max(rect.height, 6),
-                      pointerEvents: active ? 'none' : 'auto',
-                      cursor: active ? undefined : 'grab',
-                    }}
-                    onPointerOver={() => setHoverId(id)}
-                    onPointerOut={() => setHoverId((h) => (h === id ? null : h))}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelect(id)
-                    }}
-                  />
-                )
-              })}
+              {blockRects.map(({ id, rect }) => (
+                <BlockHandle
+                  key={id}
+                  id={id}
+                  rect={{ ...rect, left: rect.left }}
+                  isSelected={id === selectedId}
+                  isHovered={id === hoverId}
+                  isAnyActive={active !== null}
+                  onSelect={onSelect}
+                  onHover={setHoverId}
+                />
+              ))}
               {indicator && (
                 <div
                   className="absolute z-10 h-[3px] rounded bg-primary"
