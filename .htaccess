@@ -6,10 +6,6 @@ RewriteEngine On
 # Block dotfiles
 RewriteRule (^|/)\. - [F]
 
-# Serve /assets/* and /uploads/* from public/ BEFORE any block rules
-RewriteRule ^assets/(.*)$ public/assets/$1 [L]
-RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
-
 # Block direct access to server-side directories
 RewriteRule ^(app|migrations|scripts|tests|node_modules|src|public)(/|$) - [F]
 
@@ -19,6 +15,10 @@ RewriteRule ^([^/]+\.(sql|sh|ts|tsx|json|ya?ml|lock|md|html))$ - [F]
 # Block direct PHP access except index.php
 RewriteCond %{REQUEST_URI} !^/index\.php$
 RewriteRule \.php$ - [F]
+
+# Serve /assets/* and /uploads/* from public/ (after block rules)
+RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
 # Serve existing files/dirs directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
