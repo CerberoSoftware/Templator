@@ -16,7 +16,7 @@
 #   - app/config.php already created with DB creds + bcrypt password hash
 #     (php scripts/hash.php 'your-production-password')
 #
-# Safe to re-run: preserves app/config.php and public/uploads/ on every run.
+# Safe to re-run: preserves public/uploads/ on every run.
 # =============================================================================
 set -euo pipefail
 
@@ -77,11 +77,6 @@ if [[ $SKIP_BUILD -eq 0 ]]; then
   npm install --prefer-offline --no-audit --no-fund
 
   echo "==> Building frontend (vite)"
-  # Note: tsc --noEmit is skipped here because TypeScript 7 ships a native Go
-  # binary (typescript-go) that requires /proc/self/exe, which is unavailable
-  # on SiteGround's container environment. Type-checking should be done locally
-  # or in CI before deploying. Vite uses esbuild for transpilation and builds
-  # successfully without tsc.
   node node_modules/.bin/vite build
 else
   echo "==> Skipping frontend build (--skip-build)"
@@ -91,7 +86,6 @@ fi
 # ---------------------------------------------------------------------------
 # Sync to deploy directory
 # Preserves:
-#   app/config.php        — production credentials (never overwrite)
 #   public/uploads/       — user-uploaded assets (never overwrite)
 # ---------------------------------------------------------------------------
 echo "==> Syncing to ${DEPLOY_DIR}"
@@ -106,7 +100,6 @@ rsync -a --delete \
   --exclude 'docker/' \
   --exclude '.DS_Store' \
   --exclude 'public/uploads/' \
-  --exclude 'app/config.php' \
   "$BUILD_DIR/" "$DEPLOY_DIR/"
 
 # Ensure writable uploads directory exists
