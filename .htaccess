@@ -3,20 +3,27 @@ DirectoryIndex index.php
 
 RewriteEngine On
 
+# Block dotfiles
 RewriteRule (^|/)\. - [F]
 
+# Block direct access to server-side directories
 RewriteRule ^(app|migrations|scripts|tests|node_modules|src|public)(/|$) - [F]
 
+# Block root-level source/config files
 RewriteRule ^([^/]+\.(sql|sh|ts|tsx|json|ya?ml|lock|md|html))$ - [F]
 
+# Block direct PHP access except index.php
 RewriteCond %{REQUEST_URI} !^/index\.php$
 RewriteRule \.php$ - [F]
 
+# Map /assets/* and /uploads/* to public/ subdirectories
 RewriteRule ^assets/(.*)$ public/assets/$1 [L]
 RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
+# Serve existing files/dirs directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
+# Everything else to index.php
 RewriteRule ^ index.php [QSA,L]
