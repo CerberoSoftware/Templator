@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ImagePlus, Plus, Trash2, GripVertical } from 'lucide-react'
 import type { FieldDef } from '../../builder/blocks'
 import { type Block } from '../../builder/model'
@@ -7,6 +7,7 @@ import { findBlock } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
 import { useComponents } from '../../stores/components'
 import { useFonts, fontOptions } from '../../stores/fonts'
+import { useBrandColours } from '../../stores/brandColours'
 import { blockToComponentHtml } from '../../builder/componentCodec'
 import { AssetPickerDialog } from './AssetPickerDialog'
 import { SOCIAL_PLATFORMS } from '../../builder/blocks/social'
@@ -47,20 +48,60 @@ function RangeField({ def, value, onChange }: { def: FieldDef; value: number; on
 }
 
 function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const brand = useBrandColours((s) => s.colours)
+  const loaded = useBrandColours((s) => s.loaded)
+  const load = useBrandColours((s) => s.load)
+  useEffect(() => { if (!loaded) void load() }, [loaded, load])
+  const norm = value.trim().toLowerCase()
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="color"
-        value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : '#ffffff'}
-        onChange={(e) => onChange(e.target.value)}
-        className="size-8 cursor-pointer rounded border border-ice-200 bg-white p-0.5"
-      />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 font-mono text-xs focus:border-primary focus:outline-none"
-      />
+    <div className="flex flex-col gap-2">
+      {brand.length > 0 && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">Brand colours</span>
+            <span className="text-[10px] text-ink-400">click to apply</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {brand.map((hex) => {
+              const isActive = norm === hex.toLowerCase()
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => onChange(hex)}
+                  title={hex}
+                  aria-label={`Apply brand colour ${hex}`}
+                  className={`relative size-8 rounded-full border-2 shadow-sm transition hover:scale-105 ${isActive ? 'border-primary ring-2 ring-primary/30' : 'border-white'}`}
+                  style={{ backgroundColor: hex }}
+                >
+                  {isActive && <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow">✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      {brand.length === 0 && loaded && (
+        <p className="rounded-lg border border-dashed border-ice-200 bg-ice-50 px-2.5 py-2 text-[11px] text-ink-500">
+          No brand colours yet — <button type="button" onClick={() => (window.location.href = '/settings')} className="font-medium text-primary hover:underline">add up to 5 in Settings</button> to see them here.
+        </p>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : '#ffffff'}
+          onChange={(e) => onChange(e.target.value)}
+          className="size-8 cursor-pointer rounded border border-ice-200 bg-white p-0.5"
+          aria-label="Pick custom colour"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#2b7fe0 or transparent"
+          className="w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 font-mono text-xs focus:border-primary focus:outline-none"
+        />
+      </div>
     </div>
   )
 }
@@ -208,7 +249,7 @@ function SocialLinksField({ value, onChange }: { value: SocialLink[]; onChange: 
   )
 }
 
-export function Field({ def, value, onChange }: { def: FieldDef; value: unknown; onChange: (v: unknown) => void }) {
+export function Field({ def, value, onChange, hideLabel }: { def: FieldDef; value: unknown; onChange: (v: unknown) => void; hideLabel?: boolean }) {
   const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
   let control = null
   switch (def.type) {
@@ -278,7 +319,7 @@ export function Field({ def, value, onChange }: { def: FieldDef; value: unknown;
   }
   return (
     <div className="flex flex-col gap-1">
-      {def.type !== 'toggle' && <label className="text-xs font-medium text-ink-600">{def.label}</label>}
+      {def.type !== 'toggle' && !hideLabel && <label className="text-xs font-medium text-ink-600">{def.label}</label>}
       {control}
       {def.help && def.type !== 'toggle' && <p className="text-[11px] leading-snug text-ink-400">{def.help}</p>}
     </div>
@@ -370,9 +411,19 @@ function BlockPanel({
   duplicateBlock: (id: string) => void
 }) {
   const def = REGISTRY[block.type]
+  const defaults = (REGISTRY[block.type].defaults() as Record<string, unknown>)
   const saveAsComponent = useComponents((s) => s.saveAsComponent)
   const [saving, setSaving] = useState(false)
   const [savedName, setSavedName] = useState<string | null>(null)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ content: true, appearance: true, layout: true })
+
+  const groupFor = (key: string): 'content' | 'appearance' | 'layout' => {
+    if (['blockBg', 'blockRadius', 'widthPct', 'paddingY', 'paddingX', 'gap', 'ratio', 'width', 'height', 'fullWidth', 'radius'].includes(key)) return 'layout'
+    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'align', 'bgColor', 'bg', 'linkColor', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
+    return 'content'
+  }
+  const groups: Record<string, typeof def.fields> = { content: [], appearance: [], layout: [] }
+  for (const f of def.fields) groups[groupFor(f.key)].push(f)
 
   const handleSaveAsComponent = async () => {
     const name = window.prompt('Component name?')
@@ -430,14 +481,51 @@ function BlockPanel({
         </div>
       )}
 
-      {def.fields.map((f) => (
-        <Field
-          key={f.key}
-          def={f}
-          value={(block.props as unknown as Record<string, unknown>)[f.key]}
-          onChange={(v) => updateProps(block.id, { [f.key]: v })}
-        />
-      ))}
+      {(Object.entries({ content: 'Content', appearance: 'Appearance', layout: 'Spacing & Layout' }) as Array<[keyof typeof groups, string]>).map(([gKey, gLabel]) => {
+        const fields = groups[gKey]
+        if (fields.length === 0) return null
+        const isOpen = openSections[gKey] ?? true
+        return (
+          <div key={gKey} className="rounded-xl border border-ice-100">
+            <button
+              type="button"
+              onClick={() => setOpenSections((s) => ({ ...s, [gKey]: !isOpen }))}
+              className="flex w-full items-center justify-between px-3 py-2 text-left"
+              aria-expanded={isOpen}
+            >
+              <span className="text-xs font-semibold text-ink-700">{gLabel}</span>
+              <span className="text-xs text-ink-400">{isOpen ? '−' : '+'}</span>
+            </button>
+            {isOpen && (
+              <div className="flex flex-col gap-3 border-t border-ice-100 p-3">
+                {fields.map((f) => {
+                  const val = (block.props as unknown as Record<string, unknown>)[f.key]
+                  const defVal = defaults[f.key]
+                  const isModified = defVal !== undefined && JSON.stringify(val) !== JSON.stringify(defVal)
+                  return (
+                    <div key={f.key} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-ink-600">{f.label}</span>
+                        {isModified && (
+                          <button
+                            type="button"
+                            onClick={() => updateProps(block.id, { [f.key]: defVal })}
+                            className="text-[10px] text-primary hover:underline"
+                            title={`Reset ${f.label} to default`}
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </div>
+                      <Field hideLabel def={f} value={val} onChange={(v) => updateProps(block.id, { [f.key]: v })} />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

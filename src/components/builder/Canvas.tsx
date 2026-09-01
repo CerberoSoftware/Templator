@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, useDraggable, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
 import { GripVertical, Copy, Trash2 } from 'lucide-react'
 import { renderEmail } from '../../builder/render'
-import { type EmailDoc, type BlockType, findBlock } from '../../builder/model'
+import { type Block, type EmailDoc, type BlockType, findBlock } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
 import { useEditor, type DropTarget, type ListPath } from '../../stores/editor'
 import { Palette } from './Palette'
@@ -150,6 +150,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const duplicateBlock = useEditor((s) => s.duplicateBlock)
   const removeBlock = useEditor((s) => s.removeBlock)
   const insertBlock = useEditor((s) => s.insertBlock)
+  const [zoom, setZoom] = useState(1)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [ready, setReady] = useState(false)
   const [docHeight, setDocHeight] = useState(420)
@@ -246,6 +247,10 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     idoc.close()
     requestAnimationFrame(measure)
   }, [doc, ready, measure])
+
+  useEffect(() => {
+    requestAnimationFrame(measure)
+  }, [zoom, measure])
 
   // Auto-scroll newly selected block into view
   useEffect(() => {
@@ -398,7 +403,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => { setActive(null); setDropTarget(null) }}>
       <Palette />
       <div
-        className="flex flex-1 justify-center overflow-y-auto"
+        className="relative flex flex-1 justify-center overflow-y-auto"
         style={{ backgroundColor: canvasBg }}
         id="et-canvas-scroll"
         // Bug 4 fix: suppress the deselect-all click while a drag is in
@@ -408,7 +413,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
         onClick={active ? undefined : () => onSelect(null)}
       >
         {/* Wrapper is exactly the iframe width — overlay inset-0 aligns perfectly */}
-        <div className="relative my-6" style={{ width: `${doc.settings.contentWidth}px`, height: docHeight }}>
+        <div className="relative my-6" style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, zoom: zoom } as React.CSSProperties}>
           <iframe
             ref={iframeRef}
             title="Email canvas"
@@ -491,6 +496,52 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
                     </button>
                   ))
                 })()}
+              {/* Column gap buttons for twocol */}
+              {!active &&
+                colRects.length > 0 &&
+                doc.blocks
+                  .filter((b) => b.type === 'twocol')
+                  .flatMap((tw) => {
+                    const twBlock = tw as Extract<Block, { type: 'twocol' }>
+                    return ([0, 1] as const).flatMap((colIdx) => {
+                      const colBlocks = twBlock.columns[colIdx]
+                      const colRect = colRects.find((c) => c.id === tw.id && c.column === colIdx)?.rect
+                      if (!colRect) return [] as React.ReactElement[]
+                      const rectMap = new Map(blockRects.map((b) => [b.id, b.rect] as const))
+                      type Gap = { key: string; top: number; index: number }
+                      const gaps: Gap[] = []
+                      if (colBlocks.length === 0) {
+                        gaps.push({ key: `${tw.id}-${colIdx}-0`, top: colRect.top + 8, index: 0 })
+                      } else {
+                        const first = rectMap.get(colBlocks[0].id)
+                        if (first) gaps.push({ key: `${tw.id}-${colIdx}-0`, top: first.top, index: 0 })
+                        for (let i = 1; i < colBlocks.length; i++) {
+                          const prev = rectMap.get(colBlocks[i - 1].id)
+                          const cur = rectMap.get(colBlocks[i].id)
+                          if (prev && cur) gaps.push({ key: `${tw.id}-${colIdx}-${i}`, top: (prev.top + prev.height + cur.top) / 2, index: i })
+                        }
+                        const last = rectMap.get(colBlocks[colBlocks.length - 1].id)
+                        if (last) gaps.push({ key: `${tw.id}-${colIdx}-${colBlocks.length}`, top: last.top + last.height, index: colBlocks.length })
+                      }
+                      return gaps.map((g) => (
+                        <button
+                          key={g.key}
+                          type="button"
+                          className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-ice-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-ink-500 opacity-0 shadow-sm transition hover:border-primary hover:text-primary hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
+                          style={{ top: g.top, left: colRect.left + colRect.width / 2, pointerEvents: 'auto' }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            insertBlock('text', { path: { scope: 'column', blockId: tw.id, column: colIdx }, index: g.index })
+                          }}
+                          title={`Add Text to column ${colIdx + 1}`}
+                          aria-label={`Add block to column ${colIdx + 1} at ${g.index + 1}`}
+                        >
+                          <span className="flex size-3 items-center justify-center rounded-full bg-primary text-[9px] text-white">+</span>
+                          Add
+                        </button>
+                      ))
+                    })
+                  })}
               {selectedId && !active &&
                 (() => {
                   const r = blockRects.find((b) => b.id === selectedId)?.rect
@@ -545,6 +596,39 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
               )}
             </div>
           )}
+        </div>
+        {/* Zoom controls — not scaled, anchored to scroll viewport */}
+        <div className="pointer-events-auto absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-ice-200 bg-white px-1 py-1 shadow-lg">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
+            className="rounded-full p-1.5 text-ink-500 hover:bg-ice-50 disabled:opacity-30"
+            title="Zoom out (Ctrl+-)"
+            aria-label="Zoom out"
+            disabled={zoom <= 0.5}
+          >
+            −
+          </button>
+          <span className="min-w-[3rem] text-center text-xs font-medium text-ink-600">{Math.round(zoom * 100)}%</span>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 10) / 10))}
+            className="rounded-full p-1.5 text-ink-500 hover:bg-ice-50 disabled:opacity-30"
+            title="Zoom in (Ctrl++)"
+            aria-label="Zoom in"
+            disabled={zoom >= 1.5}
+          >
+            +
+          </button>
+          <div className="mx-1 h-4 w-px bg-ice-200" />
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="rounded-full px-2 py-1 text-xs font-medium text-ink-600 hover:bg-ice-50"
+            title="Reset zoom to 100%"
+          >
+            Reset
+          </button>
         </div>
       </div>
       <DragOverlay dropAnimation={null}>

@@ -20,6 +20,7 @@ import type { BlockType } from '../../builder/model'
 import { REGISTRY_ORDER } from '../../builder/blocks'
 import type { ActiveDrag } from './Canvas'
 import { useComponents } from '../../stores/components'
+import { useEditor } from '../../stores/editor'
 
 const ICONS: Record<BlockType, typeof Type> = {
   header: PanelTop,
@@ -42,12 +43,27 @@ function PaletteItem({ type, label }: { type: BlockType; label: string }) {
     data: { kind: 'new', type } satisfies ActiveDrag,
   })
   const Icon = ICONS[type] ?? Type
+  const insertBlock = useEditor((s) => s.insertBlock)
+  const handleInsert = () => insertBlock(type, { path: { scope: 'root' }, index: useEditor.getState().doc.blocks.length })
   return (
     <button
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`flex cursor-grab items-center gap-2.5 rounded-lg border border-ice-200 bg-white px-3 py-2 text-left text-sm text-ink-900 transition hover:border-primary hover:bg-primary-soft active:cursor-grabbing ${isDragging ? 'opacity-40' : ''}`}
+      onClick={(e) => {
+        // If drag didn't start, click inserts at end
+        if ((e.target as HTMLElement).closest('[data-drag-handle]')) return
+        handleInsert()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleInsert()
+        }
+      }}
+      className={`flex cursor-grab items-center gap-2.5 rounded-lg border border-ice-200 bg-white px-3 py-2 text-left text-sm text-ink-900 transition hover:border-primary hover:bg-primary-soft active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${isDragging ? 'opacity-40' : ''}`}
+      title="Drag to canvas or click to add at end, Enter to add"
+      aria-label={`Add ${label} block`}
     >
       <Icon className="size-4 shrink-0 text-primary" />
       <span className="truncate">{label}</span>
@@ -88,6 +104,7 @@ function ComponentItem({ id, name }: { id: number; name: string }) {
 export function Palette() {
   const components = useComponents((s) => s.components)
   const loadComponents = useComponents((s) => s.load)
+  const insertBlock = useEditor((s) => s.insertBlock)
   const [q, setQ] = useState('')
   useEffect(() => {
     void loadComponents()
@@ -122,7 +139,13 @@ export function Palette() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search blocks…"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && filtered.length > 0) {
+              e.preventDefault()
+              insertBlock(filtered[0].type, { path: { scope: 'root' }, index: useEditor.getState().doc.blocks.length })
+            }
+          }}
+          placeholder="Search blocks… (Enter to add first match)"
           className="w-full rounded-lg border border-ice-200 bg-ice-50 py-1.5 pl-8 pr-3 text-xs placeholder:text-ink-400 focus:border-primary focus:bg-white focus:outline-none"
           aria-label="Search blocks"
         />

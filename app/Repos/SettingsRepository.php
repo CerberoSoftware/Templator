@@ -7,7 +7,7 @@ use Et\Core\Database;
 
 final class SettingsRepository
 {
-    private const ALLOWED_KEYS = ['brand_fonts'];
+    private const ALLOWED_KEYS = ['brand_fonts', 'brand_colours', 'brand_colors'];
 
     private \PDO $db;
 

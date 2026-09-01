@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Code2, Download, Eye, FileInput, History, LayoutTemplate, Redo2, Save, Snowflake, Type, Undo2 } from 'lucide-react'
+import { ArrowLeft, Code2, Download, Eye, FileInput, HelpCircle, History, LayoutTemplate, Palette, Redo2, Save, Snowflake, Type, Undo2 } from 'lucide-react'
 import { api } from '../api/client'
 import { navigate } from '../router'
 import { emptyDoc, migrateDoc, type EmailDoc } from '../builder/model'
@@ -65,6 +65,7 @@ export default function EditorPage({ id }: { id: number }) {
   const [showExport, setShowExport] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showFonts, setShowFonts] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   useEffect(() => {
     void loadFonts()
@@ -114,6 +115,15 @@ export default function EditorPage({ id }: { id: number }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.key === '?' || (e.key === '/' && e.shiftKey)) && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement) && !(e.target as HTMLElement)?.isContentEditable) {
+        e.preventDefault()
+        setShowHelp((v) => !v)
+        return
+      }
+      if (e.key === 'Escape' && showHelp) {
+        setShowHelp(false)
+        return
+      }
       const mod = e.metaKey || e.ctrlKey
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault()
@@ -145,7 +155,7 @@ export default function EditorPage({ id }: { id: number }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [save, undo, redo, selectedId, select])
+  }, [save, undo, redo, selectedId, select, showHelp])
 
   const onDrop = useCallback(
     (payload: ActiveDrag, target: DropTarget) => {
@@ -222,6 +232,14 @@ export default function EditorPage({ id }: { id: number }) {
         </button>
         <div className="flex-1" />
         <button
+          onClick={() => navigate('/settings')}
+          className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-3 py-2 text-sm font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+          title="Brand colours"
+        >
+          <Palette className="size-4" />
+          Brand
+        </button>
+        <button
           onClick={() => setShowFonts(true)}
           className="flex items-center gap-1.5 rounded-lg border border-ice-200 px-3 py-2 text-sm font-medium text-ink-600 transition hover:border-primary hover:text-primary"
         >
@@ -248,6 +266,14 @@ export default function EditorPage({ id }: { id: number }) {
         >
           <Download className="size-4" />
           Export
+        </button>
+        <button
+          onClick={() => setShowHelp(true)}
+          className="rounded-lg p-2 text-ink-400 hover:bg-ice-100 hover:text-ink-900"
+          title="Shortcuts (?)"
+          aria-label="Show keyboard shortcuts"
+        >
+          <HelpCircle className="size-4" />
         </button>
         <span className="text-xs text-ink-400">
           {saving ? 'Saving…' : dirty ? 'Unsaved changes' : lastSavedAt ? `Saved ${lastSavedAt}` : 'Ready'}
@@ -280,6 +306,27 @@ export default function EditorPage({ id }: { id: number }) {
       {showExport && <ExportDialog onClose={() => setShowExport(false)} />}
       {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
       {showFonts && <FontsDialog onClose={() => setShowFonts(false)} />}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/40 p-4" onClick={() => setShowHelp(false)} role="dialog" aria-modal="true" aria-label="Shortcuts help">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="flex items-center gap-2 text-sm font-semibold"><HelpCircle className="size-4 text-primary" /> Shortcuts & Tips</h2>
+            <div className="mt-4 grid gap-3 text-sm">
+              <div className="flex justify-between"><span className="text-ink-600">Save</span><span className="font-mono text-xs">⌘/Ctrl + S</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Undo / Redo</span><span className="font-mono text-xs">⌘Z / ⇧⌘Z</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Delete block</span><span className="font-mono text-xs">Del / Backspace</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Deselect</span><span className="font-mono text-xs">Esc</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Add Text quickly</span><span className="font-mono text-xs">Click + between blocks</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Drag handle</span><span className="font-mono text-xs">Grip on hover (28px)</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Brand colours</span><span className="font-mono text-xs">Settings → Brand or palette swatches</span></div>
+              <div className="flex justify-between"><span className="text-ink-600">Zoom</span><span className="font-mono text-xs">− / + / Reset</span></div>
+            </div>
+            <p className="mt-4 text-xs text-ink-400">Palette: search, then <span className="font-mono">Enter</span> to add first match. Click any palette item to add at end without dragging. In canvas, “+ Add block” gaps and the empty-state quick-add are keyboard accessible.</p>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowHelp(false)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
       {toast && (
         <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}

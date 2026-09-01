@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FilePlus2, KeyRound, LogOut, Pencil, Snowflake, Trash2, Zap } from 'lucide-react'
+import { FilePlus2, KeyRound, LogOut, Pencil, Palette, Snowflake, Trash2, Zap } from 'lucide-react'
 import { api } from '../api/client'
 import { formatDateTime } from '../lib/utils'
 import { navigate } from '../router'
@@ -90,6 +90,14 @@ export default function TemplateList() {
             <span className="text-lg font-bold tracking-tight">eTemplator</span>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ice-100 hover:text-ink-900"
+              title="Brand colours"
+            >
+              <Palette className="size-4" />
+              Brand colours
+            </button>
             <button
               onClick={() => setShowChangePw(true)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ice-100 hover:text-ink-900"

@@ -5,6 +5,7 @@ import { useAuth } from './stores/auth'
 import Login from './pages/Login'
 import TemplateList from './pages/TemplateList'
 import EditorPage from './pages/EditorPage'
+import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
   const status = useAuth((s) => s.status)
@@ -35,6 +36,10 @@ export default function App() {
   const editorMatch = path.match(/^\/editor\/(\d+)$/)
   if (editorMatch) {
     return <EditorPage id={Number(editorMatch[1])} />
+  }
+
+  if (path === '/settings' || path === '/brand' || path === '/brand-settings') {
+    return <SettingsPage />
   }
 
   return (
