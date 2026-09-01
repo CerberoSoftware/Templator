@@ -4,7 +4,7 @@ Arctic-themed internal tool for building responsive, highly compatible HTML emai
 templates. Drag-and-drop blocks restricted to table-based structures, an inline-CSS
 engine, Outlook VML support, multi-client preview, versioning and an asset manager.
 
-Stack: PHP 8.2+ (no framework) + MySQL on SiteGround, React + TypeScript + Vite frontend.
+Stack: PHP + MySQL on SiteGround, React + TypeScript + Vite frontend.
 
 ## Local development
 
