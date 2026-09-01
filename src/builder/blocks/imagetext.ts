@@ -1,6 +1,6 @@
 import type { ImageTextProps } from '../model'
 import { DEFAULT_FONT, DEFAULT_LINK_COLOR } from '../model'
-import { alignOf, normalizeColor, numAttr, paddingY, px, renderRich, styleOf } from '../htmlUtils'
+import { firstLinkColor, normalizeColor, numAttr, paddingY, parseRichContent, px, renderRich, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef, type RenderCtx } from './types'
 
@@ -80,12 +80,12 @@ export const imageTextDef: BlockDef = {
       imgSrc: img?.getAttribute('src') ?? '',
       imgAlt: img?.getAttribute('alt') ?? 'Image',
       imgWidth: img ? numAttr(img, 'width', 200) : 200,
-      text: textTd.innerHTML ?? '',
+      text: parseRichContent(textTd),
       fontSize: px(textSt.fontSize, 15),
       lineHeight: parseFloat(textSt.lineHeight) || 1.6,
       fontFamily: textSt.fontFamily || DEFAULT_FONT,
       color: normalizeColor(textSt.color || '#333333'),
-      linkColor: DEFAULT_LINK_COLOR,
+      linkColor: firstLinkColor(textTd, DEFAULT_LINK_COLOR),
       imagePosition: imgFirst ? 'left' : 'right',
       gap: px(imgTd.style.paddingRight || imgTd.style.paddingLeft, 16) * 2,
       paddingY: paddingY(tdSt.padding, 16),

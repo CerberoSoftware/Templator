@@ -34,7 +34,7 @@ describe('parseEmailHtml round-trip', () => {
   it('wraps unknown rows as raw blocks', () => {
     const html = renderEmail({
       settings: sampleDoc().settings,
-      blocks: [{ id: 'x', type: 'raw', props: { html: '<p style="margin:0;">weird <blink>markup</blink></p>' } }],
+      blocks: [{ id: 'x', type: 'raw', props: { html: '<p style="margin:0;">weird <blink>markup</blink></p>', blockBg: 'transparent', blockRadius: 0, widthPct: 100 } }],
     })
     const parsed = parseEmailHtml(html)
     expect(parsed!.blocks).toHaveLength(1)

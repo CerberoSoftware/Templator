@@ -4,6 +4,7 @@ import { cleanLegacy } from '../../builder/legacyImport'
 import { parseEmailHtmlDetailed } from '../../builder/parser'
 import { renderEmail } from '../../builder/render'
 import { inlineCss } from '../../builder/inliner'
+import { migrateDoc } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
 
 interface ImportPreview {
@@ -48,7 +49,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
     if (!preview) return
     const cleaned = cleanLegacy(pasted)
     const parsed = parseEmailHtmlDetailed(cleaned.html)
-    if (parsed !== null) replaceDoc(parsed.doc)
+    if (parsed !== null) replaceDoc(migrateDoc(parsed.doc))
     onClose()
   }
 
