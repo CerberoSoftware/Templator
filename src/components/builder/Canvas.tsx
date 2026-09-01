@@ -42,9 +42,15 @@ interface CanvasProps {
   onDrop: (payload: ActiveDrag, target: DropTarget) => void
 }
 
-function rectOf(el: HTMLElement): Rect {
+/** Returns a rect relative to the iframe's top-left corner. */
+function rectOf(el: HTMLElement, iframeOrigin: { left: number; top: number }): Rect {
   const r = el.getBoundingClientRect()
-  return { top: r.top, left: r.left, width: r.width, height: r.height }
+  return {
+    top: r.top - iframeOrigin.top,
+    left: r.left - iframeOrigin.left,
+    width: r.width,
+    height: r.height,
+  }
 }
 
 function inside(r: Rect, x: number, y: number): boolean {
@@ -133,24 +139,29 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const measure = useCallback(() => {
-    const idoc = iframeRef.current?.contentDocument
-    if (!idoc) return
+    const iframe = iframeRef.current
+    const idoc = iframe?.contentDocument
+    if (!idoc || !iframe) return
+    // All rects are stored relative to the iframe's own top-left so that
+    // resolveTarget (which subtracts iframeRect from clientX/Y) works in
+    // the same coordinate space.
+    const iframeOrigin = iframe.getBoundingClientRect()
     const nextBlocks: BlockRect[] = []
     idoc.querySelectorAll<HTMLElement>('[data-et-block]').forEach((el) => {
       const id = el.getAttribute('data-et-block')
-      if (id != null) nextBlocks.push({ id, rect: rectOf(el) })
+      if (id != null) nextBlocks.push({ id, rect: rectOf(el, iframeOrigin) })
     })
     const nextCols: Array<{ id: string; column: 0 | 1; rect: Rect }> = []
     idoc.querySelectorAll<HTMLElement>('[data-et-col]').forEach((el) => {
       const key = el.getAttribute('data-et-col')
       if (!key) return
       const [blockId, colStr] = key.split(':')
-      nextCols.push({ id: blockId, column: colStr === '1' ? 1 : 0, rect: rectOf(el) })
+      nextCols.push({ id: blockId, column: colStr === '1' ? 1 : 0, rect: rectOf(el, iframeOrigin) })
     })
     const content = idoc.querySelector<HTMLElement>('.et-content')
     setBlockRects(nextBlocks)
     setColRects(nextCols)
-    setContentRect(content ? rectOf(content) : null)
+    setContentRect(content ? rectOf(content, iframeOrigin) : null)
     setDocHeight(Math.max(420, idoc.documentElement.scrollHeight))
   }, [])
 
@@ -174,6 +185,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
       const iframe = iframeRef.current
       if (!iframe) return null
       const iframeRect = iframe.getBoundingClientRect()
+      // Convert to iframe-local coords — same space as the stored rects.
       const x = clientX - iframeRect.left
       const y = clientY - iframeRect.top
 
@@ -305,7 +317,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
             title="Email canvas"
             srcDoc={ready ? undefined : renderEmail(doc, { markers: true, canvas: true })}
             className="absolute left-6 top-0 h-full border-0 shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
-            style={{ width: doc.settings.contentWidth, height: docHeight, backgroundColor: '#ffffff' }}
+            style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, backgroundColor: '#ffffff' }}
           />
           {ready && (
             <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
@@ -313,7 +325,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
                 <BlockHandle
                   key={id}
                   id={id}
-                  rect={{ ...rect, left: rect.left }}
+                  rect={{ ...rect, left: rect.left + 24 }}
                   isSelected={id === selectedId}
                   isHovered={id === hoverId}
                   isAnyActive={active !== null}
@@ -324,7 +336,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
               {indicator && (
                 <div
                   className="absolute z-10 h-[3px] rounded bg-primary"
-                  style={{ top: indicator.top - 1.5, left: indicator.left, width: indicator.width, boxShadow: '0 0 0 3px rgba(43,127,224,0.25)' }}
+                  style={{ top: indicator.top - 1.5, left: indicator.left + 24, width: indicator.width, boxShadow: '0 0 0 3px rgba(43,127,224,0.25)' }}
                 />
               )}
             </div>

@@ -25,6 +25,9 @@ export interface RenderOptions {
 export const CANVAS_STYLES = `
     .et-col-blocks { min-height: 56px; }
     .et-raw:empty::before { content: 'Raw HTML block'; color: #8aa0b8; font-family: Arial, sans-serif; font-size: 13px; }
+    /* Cancel any @media stacking — canvas preview is always desktop width */
+    .stack { display: inline-block !important; vertical-align: top !important; width: auto !important; }
+    .et-col { display: table-cell !important; }
 `
 
 export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
