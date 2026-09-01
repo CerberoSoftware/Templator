@@ -1,7 +1,7 @@
 import type { ImageProps } from '../model'
-import { alignOf, numAttr, paddingY, styleOf } from '../htmlUtils'
+import { alignOf, numAttr, paddingY, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
-import { ALIGN_OPTIONS, childTd, marker, type BlockDef } from './types'
+import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
 
 export const imageDef: BlockDef = {
   type: 'image',
@@ -10,10 +10,12 @@ export const imageDef: BlockDef = {
   fields: [
     { key: 'src', label: 'Image URL', type: 'url', placeholder: 'https://…' },
     { key: 'alt', label: 'Alt text', type: 'text', placeholder: 'Describe the image' },
-    { key: 'width', label: 'Width (px)', type: 'number', min: 20, max: 680, step: 1 },
+    { key: 'width', label: 'Width', type: 'range', min: 20, max: 680, step: 4, unit: 'px' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
     { key: 'link', label: 'Link URL', type: 'url', placeholder: 'https://… (optional)' },
-    { key: 'paddingY', label: 'Vertical padding', type: 'number', min: 0, max: 64, step: 1 },
+    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    ...COMMON_FIELDS,
   ],
   defaults: (): ImageProps => ({
     src: '',
@@ -22,6 +24,8 @@ export const imageDef: BlockDef = {
     align: 'center',
     link: '',
     paddingY: 8,
+    paddingX: 0,
+    ...COMMON_DEFAULTS,
   }),
   render: ({ props, id }: { props: ImageProps; id: string }, ctx) => {
     const margin =
@@ -31,8 +35,9 @@ export const imageDef: BlockDef = {
         ? `<div class="et-img-placeholder" style="background-color:#e7eef6;border:1px dashed #b3cbe8;border-radius:6px;color:#5c7793;font-family:Arial;font-size:13px;padding:28px 12px;text-align:center;">Image placeholder — set an image URL</div>`
         : `<img src="${esc(props.src)}" alt="${esc(props.alt)}" width="${props.width}" class="et-img" style="display:block;${margin}width:${props.width}px;max-width:100%;height:auto;border:0;">`
     const wrapped = props.link !== '' ? `<a href="${esc(props.link)}">${img}</a>` : img
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
     return `<tr${marker(id, ctx)}>
-  <td class="et-image" align="${props.align}" style="padding:${props.paddingY}px 24px;">${wrapped}</td>
+  <td class="et-image" align="${props.align}" style="${tdStyle}">${wrapped}</td>
 </tr>`
   },
   parse: (tr) => {
@@ -49,6 +54,9 @@ export const imageDef: BlockDef = {
       align: alignOf(td, 'center') as ImageProps['align'],
       link,
       paddingY: paddingY(st.padding, 8),
+      paddingX: px(st.paddingLeft, 0),
+      blockBg: 'transparent',
+      blockRadius: 0,
     } satisfies ImageProps
   },
 }

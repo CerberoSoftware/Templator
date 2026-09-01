@@ -1,7 +1,7 @@
 import type { HeadingProps } from '../model'
 import { DEFAULT_FONT, HEADING_SIZES } from '../model'
-import { alignOf, normalizeColor, paddingY, styleOf } from '../htmlUtils'
-import { ALIGN_OPTIONS, childTd, marker, type BlockDef } from './types'
+import { alignOf, normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
+import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
 import { esc } from '../htmlUtils'
 
 export const headingDef: BlockDef = {
@@ -18,7 +18,9 @@ export const headingDef: BlockDef = {
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
-    { key: 'paddingY', label: 'Vertical padding', type: 'number', min: 0, max: 64, step: 1 },
+    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    ...COMMON_FIELDS,
   ],
   defaults: (): HeadingProps => ({
     text: 'A clear, bold heading',
@@ -27,12 +29,17 @@ export const headingDef: BlockDef = {
     align: 'left',
     fontFamily: DEFAULT_FONT,
     paddingY: 12,
+    paddingX: 24,
+    ...COMMON_DEFAULTS,
   }),
-  render: ({ props, id }: { props: HeadingProps; id: string }, ctx) => `<tr${marker(id, ctx)}>
-  <td class="et-heading" style="padding:${props.paddingY}px 24px;">
+  render: ({ props, id }: { props: HeadingProps; id: string }, ctx) => {
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    return `<tr${marker(id, ctx)}>
+  <td class="et-heading" style="${tdStyle}">
     <h${props.level} class="et-h" style="margin:0;font-family:${props.fontFamily};font-size:${HEADING_SIZES[props.level]}px;line-height:1.3;color:${props.color};text-align:${props.align};">${esc(props.text)}</h${props.level}>
   </td>
-</tr>`,
+</tr>`
+  },
   parse: (tr) => {
     const td = childTd(tr, 'et-heading')
     if (!td) return null
@@ -48,6 +55,9 @@ export const headingDef: BlockDef = {
       align: alignOf(heading, 'left') as HeadingProps['align'],
       fontFamily: st.fontFamily || DEFAULT_FONT,
       paddingY: paddingY(tdSt.padding, 12),
+      paddingX: px(tdSt.paddingLeft, 24),
+      blockBg: 'transparent',
+      blockRadius: 0,
     } satisfies HeadingProps
   },
 }

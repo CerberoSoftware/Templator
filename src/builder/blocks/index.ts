@@ -10,6 +10,7 @@ import { dividerDef } from './divider'
 import { socialDef } from './social'
 import { footerDef } from './footer'
 import { twoColDef } from './twocol'
+import { imageTextDef } from './imagetext'
 import { rawDef } from './raw'
 import type { BlockDef, ParseCtx, RenderCtx } from './types'
 
@@ -27,6 +28,7 @@ export const REGISTRY: Record<BlockType, BlockDef> = {
   social: socialDef,
   footer: footerDef,
   twocol: twoColDef,
+  image_text: imageTextDef,
   raw: rawDef,
 }
 
@@ -41,6 +43,7 @@ export const REGISTRY_ORDER: BlockDef[] = [
   socialDef,
   footerDef,
   twoColDef,
+  imageTextDef,
   rawDef,
 ]
 

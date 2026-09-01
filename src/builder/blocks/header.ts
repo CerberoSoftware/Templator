@@ -2,7 +2,7 @@ import type { HeaderProps } from '../model'
 import { DEFAULT_FONT } from '../model'
 import { alignOf, normalizeColor, numAttr, paddingY, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
-import { ALIGN_OPTIONS, childTd, marker, type BlockDef } from './types'
+import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
 
 export const headerDef: BlockDef = {
   type: 'header',
@@ -11,14 +11,16 @@ export const headerDef: BlockDef = {
   fields: [
     { key: 'logoUrl', label: 'Logo URL', type: 'url', placeholder: 'https://…' },
     { key: 'logoAlt', label: 'Logo alt text', type: 'text' },
-    { key: 'logoWidth', label: 'Logo width (px)', type: 'number', min: 20, max: 400, step: 1 },
+    { key: 'logoWidth', label: 'Logo width', type: 'range', min: 20, max: 400, step: 1, unit: 'px' },
     { key: 'logoLink', label: 'Logo link URL', type: 'url', placeholder: 'https://… (optional)' },
-    { key: 'tagline', label: 'Tagline', type: 'text', placeholder: 'e.g. Weekly product digest' },
+    { key: 'tagline', label: 'Tagline', type: 'text', placeholder: 'e.g. Weekly digest' },
     { key: 'taglineColor', label: 'Tagline color', type: 'color' },
-    { key: 'taglineSize', label: 'Tagline size', type: 'number', min: 10, max: 20, step: 1 },
+    { key: 'taglineSize', label: 'Tagline size', type: 'range', min: 10, max: 20, step: 1, unit: 'px' },
     { key: 'bgColor', label: 'Background', type: 'color' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
-    { key: 'paddingY', label: 'Vertical padding', type: 'number', min: 0, max: 64, step: 1 },
+    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    ...COMMON_FIELDS,
   ],
   defaults: (): HeaderProps => ({
     logoUrl: '',
@@ -31,6 +33,8 @@ export const headerDef: BlockDef = {
     bgColor: '#ffffff',
     align: 'center',
     paddingY: 24,
+    paddingX: 24,
+    ...COMMON_DEFAULTS,
   }),
   render: ({ props, id }: { props: HeaderProps; id: string }, ctx) => {
     const margin =
@@ -44,8 +48,12 @@ export const headerDef: BlockDef = {
       props.tagline === ''
         ? ''
         : `<p class="et-header-tag et-last" style="margin:8px 0 0;font-family:${DEFAULT_FONT};font-size:${props.taglineSize}px;line-height:1.4;color:${props.taglineColor};">${esc(props.tagline)}</p>`
+    const tdStyle = outerTdStyle(
+      `padding:${props.paddingY}px ${props.paddingX}px;background-color:${props.bgColor};`,
+      props,
+    )
     return `<tr${marker(id, ctx)}>
-  <td class="et-header" align="${props.align}" bgcolor="${props.bgColor}" style="padding:${props.paddingY}px 24px;background-color:${props.bgColor};">${wrapped}${tagline}</td>
+  <td class="et-header" align="${props.align}" bgcolor="${props.bgColor}" style="${tdStyle}">${wrapped}${tagline}</td>
 </tr>`
   },
   parse: (tr) => {
@@ -68,6 +76,9 @@ export const headerDef: BlockDef = {
       bgColor: normalizeColor(st.backgroundColor || td.getAttribute('bgcolor') || '#ffffff'),
       align: alignOf(td, 'center') as HeaderProps['align'],
       paddingY: paddingY(st.padding, 24),
+      paddingX: px(st.paddingLeft, 24),
+      blockBg: 'transparent',
+      blockRadius: 0,
     } satisfies HeaderProps
   },
 }

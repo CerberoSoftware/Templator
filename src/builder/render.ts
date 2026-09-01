@@ -7,11 +7,13 @@ export const BASE_STYLES = `
     .et-last { margin-bottom: 0; }
     .et-h { margin: 0; }
     .et-col { border-collapse: collapse; }
+    .stack { display: inline-block; vertical-align: top; }
     @media only screen and (max-width: 620px) {
       .et-content { width: 100% !important; max-width: 100% !important; }
       .et-col { width: 100% !important; max-width: 100% !important; display: block !important; }
       .et-btn-full { width: 100% !important; }
       .et-outer-td { padding: 12px 8px !important; }
+      .stack { display: block !important; width: 100% !important; }
     }
 `
 
@@ -36,6 +38,8 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
       ? `  <div class="et-preheader" style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(settings.preheader)}${'&#160;'.repeat(40)}</div>\n`
       : ''
   const canvasStyle = canvas ? `  <style>${CANVAS_STYLES}</style>\n` : ''
+  // Global link + text colour from settings (progressive enhancement — individual blocks still override)
+  const globalStyles = `a { color: ${settings.linkColor ?? '#2b7fe0'}; } body { color: ${settings.textColor ?? '#333333'}; font-family: ${settings.fontFamily ?? 'Arial, Helvetica, sans-serif'}; }`
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -43,7 +47,7 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${esc(settings.subject)}</title>
-  <style>${BASE_STYLES}  </style>
+  <style>${BASE_STYLES}  ${globalStyles}</style>
   <!--[if mso]>
   <xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsToTheInch>96</o:PixelsToTheInch></o:OfficeDocumentSettings></xml>
   <![endif]-->

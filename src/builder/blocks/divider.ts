@@ -1,6 +1,6 @@
 import type { DividerProps } from '../model'
-import { normalizeColor, paddingY, styleOf } from '../htmlUtils'
-import { childTd, marker, type BlockDef } from './types'
+import { normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
+import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
 
 export const dividerDef: BlockDef = {
   type: 'divider',
@@ -8,15 +8,26 @@ export const dividerDef: BlockDef = {
   category: 'Layout',
   fields: [
     { key: 'color', label: 'Line color', type: 'color' },
-    { key: 'thickness', label: 'Thickness (px)', type: 'number', min: 1, max: 6, step: 1 },
-    { key: 'paddingY', label: 'Vertical padding', type: 'number', min: 0, max: 64, step: 1 },
+    { key: 'thickness', label: 'Thickness', type: 'range', min: 1, max: 8, step: 1, unit: 'px' },
+    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    ...COMMON_FIELDS,
   ],
-  defaults: (): DividerProps => ({ color: '#e7eef6', thickness: 2, paddingY: 16 }),
-  render: ({ props, id }: { props: DividerProps; id: string }, ctx) => `<tr${marker(id, ctx)}>
-  <td class="et-divider" style="padding:${props.paddingY}px 24px;">
+  defaults: (): DividerProps => ({
+    color: '#e7eef6',
+    thickness: 2,
+    paddingY: 16,
+    paddingX: 24,
+    ...COMMON_DEFAULTS,
+  }),
+  render: ({ props, id }: { props: DividerProps; id: string }, ctx) => {
+    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props)
+    return `<tr${marker(id, ctx)}>
+  <td class="et-divider" style="${tdStyle}">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="et-divider-table"><tr><td style="border-top:${props.thickness}px solid ${props.color};font-size:0;line-height:0;">&#160;</td></tr></table>
   </td>
-</tr>`,
+</tr>`
+  },
   parse: (tr) => {
     const td = childTd(tr, 'et-divider')
     if (!td) return null
@@ -29,6 +40,9 @@ export const dividerDef: BlockDef = {
       color: m ? normalizeColor(m[2]) : '#e7eef6',
       thickness: m ? parseInt(m[1], 10) : 2,
       paddingY: paddingY(tdSt.padding, 16),
+      paddingX: px(tdSt.paddingLeft, 24),
+      blockBg: 'transparent',
+      blockRadius: 0,
     } satisfies DividerProps
   },
 }

@@ -25,6 +25,26 @@ function NumberField({ def, value, onChange }: { def: FieldDef; value: number; o
   )
 }
 
+function RangeField({ def, value, onChange }: { def: FieldDef; value: number; onChange: (v: number) => void }) {
+  const num = Number.isFinite(value) ? value : (def.min ?? 0)
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="range"
+        min={def.min ?? 0}
+        max={def.max ?? 100}
+        step={def.step ?? 1}
+        value={num}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-ice-200 accent-[#2b7fe0]"
+      />
+      <span className="w-12 shrink-0 rounded-md border border-ice-200 bg-ice-50 py-0.5 text-center font-mono text-[11px] text-ink-600">
+        {Number.isInteger(def.step ?? 1) ? num : num.toFixed(1)}{def.unit ?? ''}
+      </span>
+    </div>
+  )
+}
+
 function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-2">
@@ -45,7 +65,6 @@ function ColorField({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function FontField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  // Subscribe to useFonts so the select re-renders when brand fonts are saved.
   useFonts((s) => s.brandFonts)
   const opts = fontOptions()
   const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
@@ -119,6 +138,9 @@ export function Field({ def, value, onChange }: { def: FieldDef; value: unknown;
     case 'number':
       control = <NumberField def={def} value={Number(value)} onChange={onChange} />
       break
+    case 'range':
+      control = <RangeField def={def} value={Number(value)} onChange={onChange} />
+      break
     case 'color':
       control = <ColorField value={String(value ?? '')} onChange={onChange} />
       break
@@ -183,6 +205,7 @@ export function PropertiesPanel() {
       {block === null ? (
         <div className="flex flex-col gap-4 p-4">
           <h2 className="text-sm font-semibold">Email settings</h2>
+
           <Field def={{ key: 'subject', label: 'Subject', type: 'text' }} value={doc.settings.subject} onChange={(v) => updateSettings({ subject: String(v) })} />
           <Field
             def={{ key: 'preheader', label: 'Preheader', type: 'text', help: 'Hidden preview text shown in the inbox list.' }}
@@ -190,12 +213,38 @@ export function PropertiesPanel() {
             onChange={(v) => updateSettings({ preheader: String(v) })}
           />
           <Field
-            def={{ key: 'contentWidth', label: 'Content width (px)', type: 'number', min: 480, max: 720, step: 10 }}
+            def={{ key: 'contentWidth', label: 'Content width', type: 'range', min: 480, max: 720, step: 10, unit: 'px' }}
             value={doc.settings.contentWidth}
             onChange={(v) => updateSettings({ contentWidth: Math.max(480, Math.min(720, Number(v) || 600)) })}
           />
-          <Field def={{ key: 'outerBg', label: 'Outer background', type: 'color' }} value={doc.settings.outerBg} onChange={(v) => updateSettings({ outerBg: String(v) })} />
-          <Field def={{ key: 'contentBg', label: 'Content background', type: 'color' }} value={doc.settings.contentBg} onChange={(v) => updateSettings({ contentBg: String(v) })} />
+
+          <div className="border-t border-ice-100 pt-2">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Colours</p>
+            <div className="flex flex-col gap-3">
+              <Field def={{ key: 'outerBg', label: 'Outer background', type: 'color' }} value={doc.settings.outerBg} onChange={(v) => updateSettings({ outerBg: String(v) })} />
+              <Field def={{ key: 'contentBg', label: 'Content background', type: 'color' }} value={doc.settings.contentBg} onChange={(v) => updateSettings({ contentBg: String(v) })} />
+              <Field
+                def={{ key: 'textColor', label: 'Default text colour', type: 'color' }}
+                value={doc.settings.textColor ?? '#333333'}
+                onChange={(v) => updateSettings({ textColor: String(v) })}
+              />
+              <Field
+                def={{ key: 'linkColor', label: 'Default link colour', type: 'color' }}
+                value={doc.settings.linkColor ?? '#2b7fe0'}
+                onChange={(v) => updateSettings({ linkColor: String(v) })}
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-ice-100 pt-2">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Typography</p>
+            <Field
+              def={{ key: 'fontFamily', label: 'Default font', type: 'font' }}
+              value={doc.settings.fontFamily ?? 'Arial, Helvetica, sans-serif'}
+              onChange={(v) => updateSettings({ fontFamily: String(v) })}
+            />
+          </div>
+
           <p className="rounded-lg bg-ice-50 px-3 py-2 text-[11px] leading-relaxed text-ink-600">
             Select a block on the canvas to edit its properties. Drag blocks from the left palette into the email.
           </p>

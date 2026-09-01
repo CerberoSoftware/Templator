@@ -8,10 +8,19 @@ export type BlockType =
   | 'divider'
   | 'social'
   | 'twocol'
+  | 'image_text'
   | 'footer'
   | 'raw'
 
 export type Align = 'left' | 'center' | 'right'
+
+/** Fields shared by every block */
+export interface CommonBlockProps {
+  /** Per-block background colour (overrides the email container bg). 'transparent' = no override. */
+  blockBg: string
+  /** Corner radius applied to the outer <td> wrapper in px */
+  blockRadius: number
+}
 
 export interface EmailDocSettings {
   subject: string
@@ -19,9 +28,15 @@ export interface EmailDocSettings {
   contentWidth: number
   outerBg: string
   contentBg: string
+  /** Default font stack inherited by blocks that don't override */
+  fontFamily: string
+  /** Default text colour inherited by blocks that don't override */
+  textColor: string
+  /** Default link colour inherited by blocks that don't override */
+  linkColor: string
 }
 
-export interface HeaderProps {
+export interface HeaderProps extends CommonBlockProps {
   logoUrl: string
   logoAlt: string
   logoWidth: number
@@ -32,18 +47,20 @@ export interface HeaderProps {
   bgColor: string
   align: Align
   paddingY: number
+  paddingX: number
 }
 
-export interface HeadingProps {
+export interface HeadingProps extends CommonBlockProps {
   text: string
   level: 1 | 2 | 3
   color: string
   align: Align
   fontFamily: string
   paddingY: number
+  paddingX: number
 }
 
-export interface TextProps {
+export interface TextProps extends CommonBlockProps {
   content: string
   fontSize: number
   lineHeight: number
@@ -52,18 +69,20 @@ export interface TextProps {
   align: Align
   linkColor: string
   paddingY: number
+  paddingX: number
 }
 
-export interface ImageProps {
+export interface ImageProps extends CommonBlockProps {
   src: string
   alt: string
   width: number
   align: Align
   link: string
   paddingY: number
+  paddingX: number
 }
 
-export interface ButtonProps {
+export interface ButtonProps extends CommonBlockProps {
   label: string
   href: string
   bgColor: string
@@ -71,22 +90,27 @@ export interface ButtonProps {
   radius: number
   fullWidth: boolean
   width: number
+  height: number
   fontSize: number
   fontFamily: string
+  align: Align
   paddingY: number
+  paddingX: number
 }
 
-export interface SpacerProps {
+export interface SpacerProps extends CommonBlockProps {
   height: number
+  bg: string
 }
 
-export interface DividerProps {
+export interface DividerProps extends CommonBlockProps {
   color: string
   thickness: number
   paddingY: number
+  paddingX: number
 }
 
-export interface SocialProps {
+export interface SocialProps extends CommonBlockProps {
   links: string
   color: string
   fontSize: number
@@ -94,13 +118,30 @@ export interface SocialProps {
   paddingY: number
 }
 
-export interface TwoColProps {
+export interface TwoColProps extends CommonBlockProps {
   ratio: '50-50' | '40-60' | '60-40'
   gap: number
   paddingY: number
+  paddingX: number
 }
 
-export interface FooterProps {
+export interface ImageTextProps extends CommonBlockProps {
+  imgSrc: string
+  imgAlt: string
+  imgWidth: number
+  text: string
+  fontSize: number
+  lineHeight: number
+  fontFamily: string
+  color: string
+  linkColor: string
+  imagePosition: 'left' | 'right'
+  gap: number
+  paddingY: number
+  paddingX: number
+}
+
+export interface FooterProps extends CommonBlockProps {
   content: string
   fontSize: number
   fontFamily: string
@@ -112,6 +153,8 @@ export interface FooterProps {
 
 export interface RawProps {
   html: string
+  blockBg: string
+  blockRadius: number
 }
 
 export interface BlockBase {
@@ -129,8 +172,9 @@ export type Block =
   | (BlockBase & { type: 'divider'; props: DividerProps })
   | (BlockBase & { type: 'social'; props: SocialProps })
   | (BlockBase & { type: 'footer'; props: FooterProps })
-  | (BlockBase & { type: 'raw'; props: RawProps })
   | (BlockBase & { type: 'twocol'; props: TwoColProps; columns: [Block[], Block[]] })
+  | (BlockBase & { type: 'image_text'; props: ImageTextProps })
+  | (BlockBase & { type: 'raw'; props: RawProps })
 
 export interface EmailDoc {
   settings: EmailDocSettings
@@ -139,6 +183,7 @@ export interface EmailDoc {
 
 export const DEFAULT_FONT = 'Arial, Helvetica, sans-serif'
 export const DEFAULT_LINK_COLOR = '#2b7fe0'
+export const DEFAULT_TEXT_COLOR = '#333333'
 export const HEADING_SIZES: Record<1 | 2 | 3, number> = { 1: 28, 2: 22, 3: 17 }
 
 export const WEB_SAFE_FONTS: Array<{ name: string; stack: string }> = [
@@ -164,6 +209,9 @@ export const DEFAULT_SETTINGS: EmailDocSettings = {
   contentWidth: 600,
   outerBg: '#f4f8fc',
   contentBg: '#ffffff',
+  fontFamily: DEFAULT_FONT,
+  textColor: DEFAULT_TEXT_COLOR,
+  linkColor: DEFAULT_LINK_COLOR,
 }
 
 export function emptyDoc(): EmailDoc {
@@ -220,4 +268,31 @@ export function allBlocks(doc: EmailDoc): Block[] {
   }
   walk(doc.blocks)
   return out
+}
+
+/**
+ * Migrate a doc loaded from the API that may be missing newer fields.
+ * Safe to call on already-current docs.
+ */
+export function migrateDoc(raw: unknown): EmailDoc {
+  const doc = raw as EmailDoc
+  // Settings migration: back-fill new fields
+  const s = doc.settings as Partial<EmailDocSettings>
+  if (!s.fontFamily) s.fontFamily = DEFAULT_FONT
+  if (!s.textColor) s.textColor = DEFAULT_TEXT_COLOR
+  if (!s.linkColor) s.linkColor = DEFAULT_LINK_COLOR
+  // Block migration: back-fill blockBg / blockRadius on all blocks
+  const migrate = (blocks: Block[]): void => {
+    for (const b of blocks) {
+      const p = b.props as Record<string, unknown>
+      if (p['blockBg'] === undefined) p['blockBg'] = 'transparent'
+      if (p['blockRadius'] === undefined) p['blockRadius'] = 0
+      if (b.type === 'twocol') {
+        migrate(b.columns[0])
+        migrate(b.columns[1])
+      }
+    }
+  }
+  migrate(doc.blocks)
+  return doc
 }
