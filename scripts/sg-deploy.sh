@@ -92,13 +92,8 @@ echo "==> Syncing to ${DEPLOY_DIR}"
 mkdir -p "$DEPLOY_DIR"
 
 rsync -a --delete \
-  --exclude '.git/' \
-  --exclude 'node_modules/' \
-  --exclude 'src/' \
-  --exclude 'tests/' \
-  --exclude 'docker-compose.yml' \
-  --exclude 'docker/' \
   --exclude '.DS_Store' \
+  --exclude '*.log' \
   --exclude 'public/uploads/' \
   "$BUILD_DIR/" "$DEPLOY_DIR/"
 
