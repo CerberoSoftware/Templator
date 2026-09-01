@@ -142,9 +142,9 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     const iframe = iframeRef.current
     const idoc = iframe?.contentDocument
     if (!idoc || !iframe) return
-    // All rects are stored relative to the iframe's own top-left so that
-    // resolveTarget (which subtracts iframeRect from clientX/Y) works in
-    // the same coordinate space.
+    // All rects stored relative to the iframe's own top-left so that
+    // resolveTarget (which subtracts iframeRect from clientX/Y) uses the
+    // same coordinate space as the overlay divs.
     const iframeOrigin = iframe.getBoundingClientRect()
     const nextBlocks: BlockRect[] = []
     idoc.querySelectorAll<HTMLElement>('[data-et-block]').forEach((el) => {
@@ -311,12 +311,13 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
         id="et-canvas-scroll"
         onClick={() => onSelect(null)}
       >
-        <div className="relative my-6" style={{ width: doc.settings.contentWidth + 48, height: docHeight }}>
+        {/* Wrapper is exactly the iframe width — overlay inset-0 aligns perfectly */}
+        <div className="relative my-6" style={{ width: `${doc.settings.contentWidth}px`, height: docHeight }}>
           <iframe
             ref={iframeRef}
             title="Email canvas"
             srcDoc={ready ? undefined : renderEmail(doc, { markers: true, canvas: true })}
-            className="absolute left-6 top-0 h-full border-0 shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
+            className="absolute left-0 top-0 border-0 shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
             style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, backgroundColor: '#ffffff' }}
           />
           {ready && (
@@ -325,7 +326,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
                 <BlockHandle
                   key={id}
                   id={id}
-                  rect={{ ...rect, left: rect.left + 24 }}
+                  rect={rect}
                   isSelected={id === selectedId}
                   isHovered={id === hoverId}
                   isAnyActive={active !== null}
@@ -336,7 +337,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
               {indicator && (
                 <div
                   className="absolute z-10 h-[3px] rounded bg-primary"
-                  style={{ top: indicator.top - 1.5, left: indicator.left + 24, width: indicator.width, boxShadow: '0 0 0 3px rgba(43,127,224,0.25)' }}
+                  style={{ top: indicator.top - 1.5, left: indicator.left, width: indicator.width, boxShadow: '0 0 0 3px rgba(43,127,224,0.25)' }}
                 />
               )}
             </div>
