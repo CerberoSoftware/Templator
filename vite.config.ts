@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   publicDir: false,
   build: {
-    outDir: 'public/assets',
+    outDir: 'public/static',
     assetsDir: '',
     emptyOutDir: true,
     manifest: true,
