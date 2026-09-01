@@ -14,15 +14,18 @@ Requirements: Node 18+, Docker (or any local PHP 8.3 + MySQL).
 npm install
 
 docker compose up -d
-docker compose exec php php scripts/hash.php 'your-password'   # prints bcrypt hash
+# Generate a bcrypt hash for your dev password:
+docker compose exec php php scripts/hash.php 'your-password'
 cp app/config.example.php app/config.php
-# edit app/config.php: paste the hash into auth.password_hash
+# Edit app/config.php: paste the hash into auth_password_hash.
+# Dev password used in the prompt examples: arctic2026
 docker compose exec php php scripts/migrate.php
 
-npm run dev        # Vite dev server on http://localhost:5173 (proxies /api to :8080)
+npm run dev        # Vite dev server on http://localhost:5173 (proxies /api to :8181)
 ```
 
-The API is also reachable directly at http://localhost:8181 (PHP built-in server).
+The PHP API is reachable directly at **http://localhost:8181**.
+MySQL is internal to Docker only (no published host port — connect via `docker compose exec mysql`).
 
 ## Production build
 
@@ -36,8 +39,9 @@ static files under `/assets` and `/uploads`).
 ## Deploy to SiteGround
 
 1. Create a MySQL database + user in Site Tools (MySQL section).
-2. Copy `app/config.example.php` to `app/config.php` on the server and fill in
-   DB credentials and your bcrypt password hash (`php scripts/hash.php 'pw'`).
+2. Copy `app/config.example.php` to `app/config.php` **on the server** and fill in
+   DB credentials and a fresh bcrypt hash (`php scripts/hash.php 'prod-password'`).
+   Set `debug => false` in production.
 3. Deploy:
 
 ```bash
@@ -50,7 +54,7 @@ both are safe. SSH access is available on all SiteGround plans.
 ## Tests
 
 ```bash
-npm test          # engine tests (renderer, inliner, parser, importer)
+npx vitest run    # engine unit tests (renderer, inliner, parser, importer, components)
 ```
 
 ## Security notes
@@ -61,6 +65,8 @@ npm test          # engine tests (renderer, inliner, parser, importer)
   reference-checked before deletion.
 - `.htaccess` blocks `app/`, `migrations/`, `src/`, `.git/`, config and build files.
 - Preview iframes are sandboxed (no scripts inside email HTML ever execute).
+- Login is rate-limited (bcrypt + server-side counter); password lives in
+  `app/config.php` (gitignored).
 
 ## Layout
 
