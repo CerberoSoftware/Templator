@@ -61,6 +61,7 @@ function inside(r: Rect, x: number, y: number): boolean {
 function BlockHandle({
   id,
   rect,
+  label,
   isSelected,
   isHovered,
   isAnyActive,
@@ -69,6 +70,7 @@ function BlockHandle({
 }: {
   id: string
   rect: Rect
+  label: string
   isSelected: boolean
   isHovered: boolean
   isAnyActive: boolean
@@ -118,6 +120,12 @@ function BlockHandle({
         onSelect(id)
       }}
     >
+      {/* Label chip — shows block type on hover/select */}
+      {(isHovered || isSelected) && !isAnyActive && label && (
+        <div className="absolute -top-6 left-0 rounded-md bg-ink-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow">
+          {label}
+        </div>
+      )}
       {/* Drag handle — 28px hit area, visible on hover/select */}
       {(isHovered || isSelected) && !isAnyActive && (
         <div
@@ -141,6 +149,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const selectedId = useEditor((s) => s.selectedId)
   const duplicateBlock = useEditor((s) => s.duplicateBlock)
   const removeBlock = useEditor((s) => s.removeBlock)
+  const insertBlock = useEditor((s) => s.insertBlock)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [ready, setReady] = useState(false)
   const [docHeight, setDocHeight] = useState(420)
@@ -408,27 +417,80 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
             style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, backgroundColor: '#ffffff' }}
           />
           {ready && (
-            <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+            <div className="group absolute inset-0" style={{ pointerEvents: 'none' }}>
               {doc.blocks.length === 0 && !active && (
                 <div className="absolute inset-0 flex items-center justify-center p-8" style={{ pointerEvents: 'none' }}>
-                  <div className="rounded-xl border-2 border-dashed border-ice-300 bg-white/80 px-6 py-8 text-center shadow-sm backdrop-blur">
+                  <div className="rounded-xl border-2 border-dashed border-ice-300 bg-white/80 px-6 py-6 text-center shadow-sm backdrop-blur" style={{ pointerEvents: 'auto' }}>
                     <p className="text-sm font-semibold text-ink-700">Drag blocks here</p>
-                    <p className="mt-1 text-xs text-ink-400">Try Header, Text, or Button from the palette</p>
+                    <p className="mt-1 text-xs text-ink-400">or quickly add</p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {(['header', 'text', 'heading', 'image', 'button'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            insertBlock(t as BlockType, { path: { scope: 'root' }, index: 0 })
+                          }}
+                          className="rounded-full border border-ice-200 bg-white px-2.5 py-1 text-xs font-medium text-ink-600 transition hover:border-primary hover:text-primary"
+                        >
+                          {(REGISTRY[t as keyof typeof REGISTRY]?.label ?? t) as string}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[10px] text-ink-400">Tip: drag from the left palette for more options</p>
                   </div>
                 </div>
               )}
-              {blockRects.map(({ id, rect }) => (
-                <BlockHandle
-                  key={id}
-                  id={id}
-                  rect={rect}
-                  isSelected={id === selectedId}
-                  isHovered={id === hoverId}
-                  isAnyActive={active !== null}
-                  onSelect={onSelect}
-                  onHover={setHoverId}
-                />
-              ))}
+              {blockRects.map(({ id, rect }) => {
+                const type = findBlock(doc, id)?.block.type ?? 'text'
+                const label = REGISTRY[type as keyof typeof REGISTRY]?.label ?? type
+                return (
+                  <BlockHandle
+                    key={id}
+                    id={id}
+                    rect={rect}
+                    label={label}
+                    isSelected={id === selectedId}
+                    isHovered={id === hoverId}
+                    isAnyActive={active !== null}
+                    onSelect={onSelect}
+                    onHover={setHoverId}
+                  />
+                )
+              })}
+              {/* Quick-add gap buttons — click to insert Text block without dragging */}
+              {!active && doc.blocks.length > 0 && contentRect &&
+                (() => {
+                  const rectMap = new Map(blockRects.map((b) => [b.id, b.rect] as const))
+                  const gaps: Array<{ index: number; top: number }> = []
+                  const first = rectMap.get(doc.blocks[0].id)
+                  if (first) gaps.push({ index: 0, top: first.top })
+                  for (let i = 1; i < doc.blocks.length; i++) {
+                    const prev = rectMap.get(doc.blocks[i - 1].id)
+                    const cur = rectMap.get(doc.blocks[i].id)
+                    if (prev && cur) gaps.push({ index: i, top: (prev.top + prev.height + cur.top) / 2 })
+                  }
+                  const last = rectMap.get(doc.blocks[doc.blocks.length - 1].id)
+                  if (last) gaps.push({ index: doc.blocks.length, top: last.top + last.height })
+                  return gaps.map((g) => (
+                    <button
+                      key={`gap-${g.index}`}
+                      type="button"
+                      className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border border-ice-200 bg-white px-2 py-1 text-[11px] font-medium text-ink-500 opacity-0 shadow-sm transition hover:border-primary hover:text-primary hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
+                      style={{ top: g.top, left: contentRect.left + contentRect.width / 2, pointerEvents: 'auto' }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        insertBlock('text', { path: { scope: 'root' }, index: g.index })
+                      }}
+                      title="Add Text block here"
+                      aria-label={`Add block at position ${g.index + 1}`}
+                    >
+                      <span className="flex size-3.5 items-center justify-center rounded-full bg-primary text-[10px] leading-none text-white">+</span>
+                      Add block
+                    </button>
+                  ))
+                })()}
               {selectedId && !active &&
                 (() => {
                   const r = blockRects.find((b) => b.id === selectedId)?.rect

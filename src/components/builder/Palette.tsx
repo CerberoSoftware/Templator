@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { Trash2 } from 'lucide-react'
+import { Search, Trash2 } from 'lucide-react'
 import {
   AlignLeft,
   Blocks,
@@ -88,19 +88,45 @@ function ComponentItem({ id, name }: { id: number; name: string }) {
 export function Palette() {
   const components = useComponents((s) => s.components)
   const loadComponents = useComponents((s) => s.load)
+  const [q, setQ] = useState('')
   useEffect(() => {
     void loadComponents()
   }, [loadComponents])
 
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    if (!s) return REGISTRY_ORDER
+    return REGISTRY_ORDER.filter((d) => d.label.toLowerCase().includes(s) || d.type.toLowerCase().includes(s) || d.category.toLowerCase().includes(s))
+  }, [q])
+
   const categories = new Map<string, Array<{ type: BlockType; label: string }>>()
-  for (const def of REGISTRY_ORDER) {
+  for (const def of filtered) {
     const list = categories.get(def.category) ?? []
     list.push({ type: def.type, label: def.label })
     categories.set(def.category, list)
   }
+  const compFiltered = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    if (!s) return components
+    return components.filter((c) => c.name.toLowerCase().includes(s) || c.category.toLowerCase().includes(s))
+  }, [q, components])
+
   return (
     <aside className="flex w-60 shrink-0 flex-col gap-5 overflow-y-auto border-r border-ice-200 bg-white px-3 py-4">
-      <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-ink-400">Blocks</h2>
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-400">Blocks</h2>
+        <span className="text-[10px] text-ink-400">{filtered.length} types</span>
+      </div>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search blocks…"
+          className="w-full rounded-lg border border-ice-200 bg-ice-50 py-1.5 pl-8 pr-3 text-xs placeholder:text-ink-400 focus:border-primary focus:bg-white focus:outline-none"
+          aria-label="Search blocks"
+        />
+      </div>
       {[...categories.entries()].map(([category, items]) => (
         <div key={category} className="flex flex-col gap-1.5">
           <h3 className="px-1 text-[11px] font-medium uppercase tracking-wider text-ink-600">{category}</h3>
@@ -109,14 +135,21 @@ export function Palette() {
           ))}
         </div>
       ))}
+      {filtered.length === 0 && <p className="px-1 text-xs text-ink-400">No blocks match “{q}”.</p>}
       <div className="flex flex-col gap-1.5">
-        <h3 className="px-1 text-[11px] font-medium uppercase tracking-wider text-ink-600">My components</h3>
-        {components.length === 0 && (
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-[11px] font-medium uppercase tracking-wider text-ink-600">My components</h3>
+          <span className="text-[10px] text-ink-400">{compFiltered.length}</span>
+        </div>
+        {compFiltered.length === 0 && q && (
+          <p className="px-1 text-xs text-ink-400">No components match “{q}”.</p>
+        )}
+        {compFiltered.length === 0 && !q && (
           <p className="px-1 text-[11px] leading-snug text-ink-400">
             Select a block, then use “Save as component” to reuse it here.
           </p>
         )}
-        {components.map((c) => (
+        {compFiltered.map((c) => (
           <ComponentItem key={c.id} id={c.id} name={c.name} />
         ))}
       </div>
