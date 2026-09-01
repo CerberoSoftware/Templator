@@ -148,7 +148,23 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const insertBlock = useEditor((s) => s.insertBlock)
   const [zoom, setZoom] = useState(1)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  // Frozen at mount. Flipping srcDoc to undefined once ready removes the
+  // attribute, which re-navigates the iframe to about:blank and can wipe the
+  // document the effect below just wrote — the race behind a saved template
+  // rendering with stale geometry. Keeping the value constant means React
+  // never touches the attribute again; every update goes through idoc.write().
+  const initialSrcDoc = useRef<string | null>(null)
   const [ready, setReady] = useState(false)
+  // Bumped after every document rewrite so the resize/mutation observers below
+  // rebind: idoc.open() replaces documentElement, which silently detaches any
+  // observer still watching the previous one.
+  const [generation, setGeneration] = useState(0)
+  // Monotonic token guarding against out-of-order async measurements. measure()
+  // awaits fonts, images and a settle timeout, so a measurement started against
+  // an older document can otherwise resolve last and clobber a newer one — the
+  // reason a freshly loaded template showed stale handle positions and a
+  // too-short iframe until the next edit forced a re-measure.
+  const measureToken = useRef(0)
   const [docHeight, setDocHeight] = useState(420)
   const [blockRects, setBlockRects] = useState<BlockRect[]>([])
   const [colRects, setColRects] = useState<Array<{ id: string; column: 0 | 1; rect: Rect }>>([])
@@ -156,6 +172,10 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [active, setActive] = useState<ActiveDrag | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+
+  if (initialSrcDoc.current === null) {
+    initialSrcDoc.current = renderEmail(doc, { markers: true, canvas: true })
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -167,21 +187,28 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     const iframe = iframeRef.current
     const idoc = iframe?.contentDocument
     if (!idoc || !iframe) return
+    const token = ++measureToken.current
+    const stale = (): boolean => token !== measureToken.current || iframeRef.current !== iframe
     // Wait for fonts to load
     if (idoc.fonts && idoc.fonts.ready) {
       await idoc.fonts.ready
+      if (stale()) return
     }
-// Wait for images to load
+    // Wait for images to load
     const images = Array.from(idoc.querySelectorAll('img'))
     await Promise.all(images.map((img) => {
       if (img.complete) return Promise.resolve()
       return new Promise<void>((resolve) => {
-        img.onload = () => resolve()
-        img.onerror = () => resolve()
+        img.addEventListener('load', () => resolve(), { once: true })
+        img.addEventListener('error', () => resolve(), { once: true })
       })
     }))
+    if (stale()) return
     // Small delay to ensure layout is stable
     await new Promise((r) => setTimeout(r, 50))
+    if (stale()) return
+    // A rewrite between the awaits swaps documentElement out from under us.
+    if (iframe.contentDocument !== idoc || !idoc.documentElement) return
     // Use the iframe document's own viewport as origin so rects are
     // iframe-local. Subtracting documentElement (same window as blocks)
     // works both when getBoundingClientRect is iframe-viewport (0-based)
@@ -204,7 +231,12 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     setBlockRects(nextBlocks)
     setColRects(nextCols)
     setContentRect(content ? rectOf(content, origin) : null)
-    const newHeight = Math.max(420, idoc.documentElement.scrollHeight)
+    const newHeight = Math.max(
+      420,
+      idoc.documentElement.scrollHeight,
+      idoc.body?.scrollHeight ?? 0,
+      content ? Math.ceil(content.getBoundingClientRect().height) : 0,
+    )
     setDocHeight(newHeight)
     // Also update iframe height to match content
     iframe.style.height = `${newHeight}px`
@@ -218,15 +250,16 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     window.addEventListener('resize', onResize)
     let ro: ResizeObserver | null = null
     let mo: MutationObserver | null = null
+    const idoc = iframe.contentDocument
     if (typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(onResize)
       ro.observe(iframe)
-      const idoc = iframe.contentDocument
-      if (idoc?.documentElement) ro.observe(idoc.documentElement)
+      // documentElement is pinned to the iframe height, so it never reports
+      // content growth — body does.
+      if (idoc?.body) ro.observe(idoc.body)
     }
     // Fallback: observe iframe DOM mutations (image load, font load)
-    const idoc = iframe.contentDocument
-    if (idoc && typeof MutationObserver !== 'undefined') {
+    if (idoc?.documentElement && typeof MutationObserver !== 'undefined') {
       mo = new MutationObserver(onResize)
       mo.observe(idoc.documentElement, { childList: true, subtree: true, attributes: true })
     }
@@ -235,7 +268,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
       ro?.disconnect()
       mo?.disconnect()
     }
-  }, [measure, ready])
+  }, [measure, ready, generation])
 
   useEffect(() => {
     const iframe = iframeRef.current
@@ -259,6 +292,8 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     idoc.open()
     idoc.write(renderEmail(doc, { markers: true, canvas: true }))
     idoc.close()
+    // documentElement is brand new after the write — rebind the observers.
+    setGeneration((g) => g + 1)
     measure()
   }, [doc, ready, measure])
 
@@ -458,7 +493,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
           <iframe
             ref={iframeRef}
             title="Email canvas"
-            srcDoc={ready ? undefined : renderEmail(doc, { markers: true, canvas: true })}
+            srcDoc={initialSrcDoc.current}
             className="absolute left-0 top-0 border-0 shadow-[0_1px_8px_rgba(15,37,64,0.08)]"
             style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, backgroundColor: '#ffffff', pointerEvents: active ? 'none' : 'auto' }}
           />
