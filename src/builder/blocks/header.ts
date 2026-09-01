@@ -61,15 +61,21 @@ export const headerDef: BlockDef = {
     const td = childTd(tr, 'et-header')
     if (!td) return null
     const img = td.querySelector('img.et-header-logo') as HTMLImageElement | null
-    if (!img) return null
-    const link = (img.parentElement?.tagName === 'A' ? img.parentElement.getAttribute('href') : '') ?? ''
+    // Bug 6 fix: when no logo URL is set the renderer emits a placeholder
+    // <div class="et-logo-placeholder"> instead of an <img>. Previously
+    // parse() returned null here, silently dropping the whole block on
+    // import. Now we fall back to default logo values so the block is
+    // preserved with an empty logoUrl.
+    const link = img
+      ? ((img.parentElement?.tagName === 'A' ? img.parentElement.getAttribute('href') : '') ?? '')
+      : ''
     const taglineEl = td.querySelector('p.et-header-tag') as HTMLElement | null
     const tagSt = taglineEl ? styleOf(taglineEl) : null
     const st = styleOf(td)
     return {
-      logoUrl: img.getAttribute('src') ?? '',
-      logoAlt: img.getAttribute('alt') ?? 'Logo',
-      logoWidth: numAttr(img, 'width', 160),
+      logoUrl: img?.getAttribute('src') ?? '',
+      logoAlt: img?.getAttribute('alt') ?? 'Logo',
+      logoWidth: img ? numAttr(img, 'width', 160) : 160,
       logoLink: link,
       tagline: taglineEl?.textContent ?? '',
       taglineColor: tagSt ? normalizeColor(tagSt.color || '#5c7793') : '#5c7793',
@@ -80,6 +86,7 @@ export const headerDef: BlockDef = {
       paddingX: px(st.paddingLeft, 24),
       blockBg: 'transparent',
       blockRadius: 0,
+      widthPct: 100,
     } satisfies HeaderProps
   },
 }

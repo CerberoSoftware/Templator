@@ -100,6 +100,10 @@ export const twoColDef: BlockDef = {
       paddingX: px(st.paddingLeft, 24),
       blockBg: 'transparent',
       blockRadius: 0,
+      // Minor fix: widthPct was missing from parse() return, violating the
+      // CommonBlockProps contract and causing TypeScript to accept an
+      // under-specified object at runtime.
+      widthPct: 100,
       columns: [parseColumn(col1), parseColumn(col2)],
     }
   },

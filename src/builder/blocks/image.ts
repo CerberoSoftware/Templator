@@ -44,19 +44,25 @@ export const imageDef: BlockDef = {
     const td = childTd(tr, 'et-image')
     if (!td) return null
     const img = td.querySelector('img.et-img') as HTMLImageElement | null
-    if (!img) return null
-    const link = (img.parentElement?.tagName === 'A' ? img.parentElement.getAttribute('href') : '') ?? ''
+    // Bug 6 fix: when no src is set the renderer emits a placeholder <div>
+    // rather than an <img>. Previously parse() returned null here, silently
+    // dropping the entire block on import. Now we fall back to defaults so
+    // the block is preserved with an empty src.
+    const link = img
+      ? ((img.parentElement?.tagName === 'A' ? img.parentElement.getAttribute('href') : '') ?? '')
+      : ''
     const st = styleOf(td)
     return {
-      src: img.getAttribute('src') ?? '',
-      alt: img.getAttribute('alt') ?? '',
-      width: numAttr(img, 'width', 552),
+      src: img?.getAttribute('src') ?? '',
+      alt: img?.getAttribute('alt') ?? '',
+      width: img ? numAttr(img, 'width', 552) : 552,
       align: alignOf(td, 'center') as ImageProps['align'],
       link,
       paddingY: paddingY(st.padding, 8),
       paddingX: px(st.paddingLeft, 0),
       blockBg: 'transparent',
       blockRadius: 0,
+      widthPct: 100,
     } satisfies ImageProps
   },
 }

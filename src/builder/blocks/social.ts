@@ -4,7 +4,7 @@ import { normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, ALIGN_OPTIONS, type BlockDef } from './types'
 
-// ── Supported platforms ────────────────────────────────────────────────────
+// ── Supported platforms ──────────────────────────────────────────────────────────────────────
 export const SOCIAL_PLATFORMS = [
   'Twitter',
   'LinkedIn',
@@ -20,7 +20,7 @@ export const SOCIAL_PLATFORMS = [
 
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number]
 
-// ── Inline SVG icons (24×24 viewBox, single-path where possible) ──────────
+// ── Inline SVG icons (24×24 viewBox, single-path where possible) ──────────────────────
 // All icons are rendered at the requested iconSize via width/height attrs.
 const ICONS: Record<string, string> = {
   Twitter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.261 5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
@@ -50,7 +50,7 @@ function matchPlatform(label: string): string {
   return SOCIAL_PLATFORMS.find((p) => p.toLowerCase() === l) ?? label
 }
 
-// ── Legacy plain-text parser (kept for parse round-trip) ────────────────────
+// ── Legacy plain-text parser (kept for parse round-trip) ──────────────────────────────────────
 export function parseSocialLinks(links: string): SocialLink[] {
   return links
     .split('\n')
@@ -146,18 +146,37 @@ ${content}
   parse: (tr) => {
     const td = childTd(tr, 'et-social')
     if (!td) return null
+
+    // Bug 2 fix: detect row layout BEFORE collecting links.
+    // A row block emits a single wrapper <div> containing <span> items;
+    // a column block emits one <div> per link directly under the <td>.
+    // The old code queried ALL divs inside td which, for a row block,
+    // returned only the single wrapper div — discarding all icons after
+    // the first. Now we branch on structure.
+    const directDivs = Array.from(td.querySelectorAll<HTMLElement>(':scope > div'))
+    const isRow = directDivs.length === 1 && directDivs[0].querySelectorAll('span[style*="inline-block"]').length > 1
+
     const links: SocialLink[] = []
-    td.querySelectorAll<HTMLElement>('div').forEach((div) => {
-      const a = div.querySelector('a')
-      const href = a?.getAttribute('href') ?? ''
-      const span = div.querySelector('span')
-      const platform = span?.textContent?.trim() || 'Twitter'
-      links.push({ platform: matchPlatform(platform), href })
-    })
-    // Detect row layout: if there are no block-level divs wrapping each item
-    // but instead a single wrapper div with inline spans, mark as row
-    const divs = Array.from(td.querySelectorAll<HTMLElement>(':scope > div'))
-    const isRow = divs.length === 1 && divs[0].querySelectorAll('span[style*="inline-block"]').length > 0
+    if (isRow) {
+      // Row layout: each icon lives in an inline-block <span> inside the wrapper div
+      directDivs[0].querySelectorAll<HTMLElement>(':scope > span[style*="inline-block"]').forEach((span) => {
+        const a = span.querySelector('a')
+        const href = a?.getAttribute('href') ?? ''
+        const labelSpan = span.querySelector<HTMLElement>('span[style*="font-family"]')
+        const platform = labelSpan?.textContent?.trim() || 'Twitter'
+        links.push({ platform: matchPlatform(platform), href })
+      })
+    } else {
+      // Column layout: one <div> per link
+      directDivs.forEach((div) => {
+        const a = div.querySelector('a')
+        const href = a?.getAttribute('href') ?? ''
+        const span = div.querySelector('span[style*="font-family"]')
+        const platform = span?.textContent?.trim() || 'Twitter'
+        links.push({ platform: matchPlatform(platform), href })
+      })
+    }
+
     if (links.length === 0) return null
     const tdSt = styleOf(td)
     return {

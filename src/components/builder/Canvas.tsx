@@ -169,7 +169,17 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     const iframe = iframeRef.current
     if (!iframe) return
     if (!ready) {
-      iframe.addEventListener('load', () => setReady(true), { once: true })
+      iframe.addEventListener(
+        'load',
+        () => {
+          setReady(true)
+          // Bug 3 fix: call measure() immediately after the iframe loads so
+          // block handles are visible on first render without requiring a
+          // subsequent doc-change to trigger the effect again.
+          requestAnimationFrame(measure)
+        },
+        { once: true },
+      )
       return
     }
     const idoc = iframe.contentDocument
@@ -309,7 +319,11 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
         className="flex flex-1 justify-center overflow-y-auto"
         style={{ backgroundColor: canvasBg }}
         id="et-canvas-scroll"
-        onClick={() => onSelect(null)}
+        // Bug 4 fix: suppress the deselect-all click while a drag is in
+        // progress. Without this the pointer-up that ends a DnD gesture
+        // also fired onClick on the scroll container, deselecting the
+        // freshly-dropped block and requiring an extra click to re-select it.
+        onClick={active ? undefined : () => onSelect(null)}
       >
         {/* Wrapper is exactly the iframe width — overlay inset-0 aligns perfectly */}
         <div className="relative my-6" style={{ width: `${doc.settings.contentWidth}px`, height: docHeight }}>

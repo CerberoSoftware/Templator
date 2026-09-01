@@ -135,16 +135,27 @@ function SocialLinksField({ value, onChange }: { value: SocialLink[]; onChange: 
 
   const remove = (index: number) => onChange(links.filter((_, i) => i !== index))
 
-  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  // Bug 5 fix: track the dragged item by a stable identity key rather than
+  // its array index. When onChange() is called inside onDragOver the array
+  // shifts, but dragKey stays constant so the splice target is always correct
+  // even when the user drags quickly across multiple rows.
+  const [dragKey, setDragKey] = useState<string | null>(null)
 
-  const onDragStart = (i: number) => setDragIdx(i)
-  const onDragOver = (e: React.DragEvent, i: number) => {
+  const itemKey = (link: SocialLink, i: number) => `${link.platform}::${link.href}::${i}`
+
+  const onDragStart = (link: SocialLink, i: number) => setDragKey(itemKey(link, i))
+
+  const onDragOver = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault()
-    if (dragIdx === null || dragIdx === i) return
+    if (dragKey === null) return
+    const sourceIndex = links.findIndex((l, i) => itemKey(l, i) === dragKey)
+    if (sourceIndex === -1 || sourceIndex === targetIndex) return
     const next = [...links]
-    const [moved] = next.splice(dragIdx, 1)
-    next.splice(i, 0, moved)
-    setDragIdx(i)
+    const [moved] = next.splice(sourceIndex, 1)
+    next.splice(targetIndex, 0, moved)
+    // Update the key to reflect the item's new position so subsequent
+    // onDragOver calls resolve the source index correctly.
+    setDragKey(itemKey(moved, targetIndex))
     onChange(next)
   }
 
@@ -154,9 +165,9 @@ function SocialLinksField({ value, onChange }: { value: SocialLink[]; onChange: 
         <div
           key={i}
           draggable
-          onDragStart={() => onDragStart(i)}
+          onDragStart={() => onDragStart(link, i)}
           onDragOver={(e) => onDragOver(e, i)}
-          onDragEnd={() => setDragIdx(null)}
+          onDragEnd={() => setDragKey(null)}
           className="flex items-center gap-1.5 rounded-xl border border-ice-200 bg-ice-50 p-2"
         >
           <GripVertical className="size-3.5 shrink-0 cursor-grab text-ink-300" />

@@ -92,6 +92,9 @@ export const imageTextDef: BlockDef = {
       paddingX: px(tdSt.paddingLeft, 24),
       blockBg: 'transparent',
       blockRadius: 0,
+      // Bug 1 fix: widthPct was missing, causing custom block width to be
+      // lost on round-trips and component drops.
+      widthPct: 100,
     } satisfies ImageTextProps
   },
 }
