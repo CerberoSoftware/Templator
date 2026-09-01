@@ -365,9 +365,9 @@ function BlockPanel({
   duplicateBlock,
 }: {
   block: Block
-  updateProps: ReturnType<typeof useEditor>['updateProps']
-  removeBlock: ReturnType<typeof useEditor>['removeBlock']
-  duplicateBlock: ReturnType<typeof useEditor>['duplicateBlock']
+  updateProps: (id: string, patch: Record<string, unknown>) => void
+  removeBlock: (id: string) => void
+  duplicateBlock: (id: string) => void
 }) {
   const def = REGISTRY[block.type]
   const saveAsComponent = useComponents((s) => s.saveAsComponent)
@@ -434,7 +434,7 @@ function BlockPanel({
         <Field
           key={f.key}
           def={f}
-          value={(block.props as Record<string, unknown>)[f.key]}
+          value={(block.props as unknown as Record<string, unknown>)[f.key]}
           onChange={(v) => updateProps(block.id, { [f.key]: v })}
         />
       ))}

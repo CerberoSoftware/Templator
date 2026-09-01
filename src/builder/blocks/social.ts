@@ -1,6 +1,6 @@
 import type { SocialProps, SocialLink } from '../model'
 import { DEFAULT_FONT } from '../model'
-import { normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
+import { paddingY, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, ALIGN_OPTIONS, type BlockDef } from './types'
 

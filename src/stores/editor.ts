@@ -29,6 +29,7 @@ interface EditorState {
   dirty: boolean
   saving: boolean
   lastSavedAt: string | null
+  lastSavedDoc: EmailDoc | null
   past: EmailDoc[]
   future: EmailDoc[]
   load: (templateId: number, name: string, doc: EmailDoc) => void
@@ -49,13 +50,34 @@ interface EditorState {
 }
 
 const HISTORY_LIMIT = 100
+const HISTORY_DEBOUNCE_MS = 400
+let lastHistoryPush = 0
+let lastSavedJson: string | null = null
+
+function isDirty(doc: EmailDoc): boolean {
+  if (lastSavedJson === null) return true
+  try {
+    return JSON.stringify(doc) !== lastSavedJson
+  } catch {
+    return true
+  }
+}
 
 function withHistory(state: EditorState, doc: EmailDoc): Partial<EditorState> {
+  lastHistoryPush = Date.now()
   return {
     doc,
     past: [...state.past, state.doc].slice(-HISTORY_LIMIT),
     future: [],
-    dirty: true,
+    dirty: isDirty(doc),
+  }
+}
+
+function withoutHistory(doc: EmailDoc): Partial<EditorState> {
+  return {
+    doc,
+    future: [],
+    dirty: isDirty(doc),
   }
 }
 
@@ -106,11 +128,15 @@ export const useEditor = create<EditorState>((set) => ({
   dirty: false,
   saving: false,
   lastSavedAt: null,
+  lastSavedDoc: null,
   past: [],
   future: [],
 
-  load: (templateId, name, doc) =>
-    set({ templateId, templateName: name, doc, selectedId: null, dirty: false, past: [], future: [], lastSavedAt: null }),
+  load: (templateId, name, doc) => {
+    lastSavedJson = JSON.stringify(doc)
+    lastHistoryPush = 0
+    return set({ templateId, templateName: name, doc, selectedId: null, dirty: false, past: [], future: [], lastSavedAt: null, lastSavedDoc: structuredClone(doc) })
+  },
   replaceDoc: (doc) =>
     set((state) => ({ ...withHistory(state, doc), selectedId: null })),
   setName: (name) => set({ templateName: name, dirty: true }),
@@ -217,6 +243,10 @@ export const useEditor = create<EditorState>((set) => ({
       const fresh = findBlock(doc, id)
       if (!fresh) return {}
       fresh.block.props = { ...fresh.block.props, ...partial }
+      const now = Date.now()
+      if (now - lastHistoryPush < HISTORY_DEBOUNCE_MS && state.past.length > 0) {
+        return withoutHistory(doc)
+      }
       return withHistory(state, doc)
     }),
 
@@ -224,6 +254,10 @@ export const useEditor = create<EditorState>((set) => ({
     set((state) => {
       const doc = structuredClone(state.doc)
       doc.settings = { ...doc.settings, ...partial }
+      const now = Date.now()
+      if (now - lastHistoryPush < HISTORY_DEBOUNCE_MS && state.past.length > 0) {
+        return withoutHistory(doc)
+      }
       return withHistory(state, doc)
     }),
 
@@ -231,11 +265,13 @@ export const useEditor = create<EditorState>((set) => ({
     set((state) => {
       if (state.past.length === 0) return {}
       const previous = state.past[state.past.length - 1]
+      const nextSelected = state.selectedId && findBlock(previous, state.selectedId) ? state.selectedId : null
       return {
         doc: previous,
         past: state.past.slice(0, -1),
         future: [state.doc, ...state.future].slice(0, HISTORY_LIMIT),
-        dirty: true,
+        selectedId: nextSelected,
+        dirty: isDirty(previous),
       }
     }),
 
@@ -243,15 +279,21 @@ export const useEditor = create<EditorState>((set) => ({
     set((state) => {
       if (state.future.length === 0) return {}
       const next = state.future[0]
+      const nextSelected = state.selectedId && findBlock(next, state.selectedId) ? state.selectedId : null
       return {
         doc: next,
         past: [...state.past, state.doc].slice(-HISTORY_LIMIT),
         future: state.future.slice(1),
-        dirty: true,
+        selectedId: nextSelected,
+        dirty: isDirty(next),
       }
     }),
 
-  markSaved: (at) => set({ dirty: false, lastSavedAt: at }),
+  markSaved: (at) => {
+    const doc = useEditor.getState().doc
+    lastSavedJson = JSON.stringify(doc)
+    return set({ dirty: false, lastSavedAt: at, lastSavedDoc: structuredClone(doc) })
+  },
   setSaving: (saving) => set({ saving }),
 }))
 

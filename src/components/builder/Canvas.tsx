@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useDraggable, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
-import { GripVertical } from 'lucide-react'
+import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, useDraggable, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
+import { GripVertical, Copy, Trash2 } from 'lucide-react'
 import { renderEmail } from '../../builder/render'
 import { type EmailDoc, type BlockType, findBlock } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
@@ -84,7 +84,11 @@ function BlockHandle({
     <div
       ref={setNodeRef}
       data-et-drop-id={id}
-      className={`absolute box-border rounded-[3px] ${
+      tabIndex={0}
+      role="region"
+      aria-label={`Block ${id}, press Space to drag`}
+      aria-grabbed={isDragging}
+      className={`absolute box-border rounded-[3px] outline-offset-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
         isSelected
           ? 'outline outline-2 outline-primary'
           : isHovered
@@ -101,22 +105,31 @@ function BlockHandle({
       }}
       onPointerOver={() => onHover(id)}
       onPointerOut={() => onHover(null)}
+      onFocus={() => onHover(id)}
+      onBlur={() => onHover(null)}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !isAnyActive) {
+          e.preventDefault()
+          onSelect(id)
+        }
+      }}
       onClick={(e) => {
         e.stopPropagation()
         onSelect(id)
       }}
     >
-      {/* Drag handle — visible on hover/select */}
+      {/* Drag handle — 28px hit area, visible on hover/select */}
       {(isHovered || isSelected) && !isAnyActive && (
         <div
           {...listeners}
           {...attributes}
-          className="absolute -left-5 top-1/2 flex -translate-y-1/2 cursor-grab items-center justify-center rounded-sm p-0.5 text-ink-400 hover:text-primary active:cursor-grabbing"
-          style={{ pointerEvents: 'auto' }}
+          className="absolute -left-7 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-grab items-center justify-center rounded-md text-ink-400 hover:bg-white hover:shadow-sm hover:text-primary active:cursor-grabbing"
+          style={{ pointerEvents: 'auto', touchAction: 'none' }}
           onClick={(e) => e.stopPropagation()}
           title="Drag to reorder"
+          aria-label="Drag to reorder"
         >
-          <GripVertical className="size-3.5" />
+          <GripVertical className="size-4" />
         </div>
       )}
     </div>
@@ -126,6 +139,8 @@ function BlockHandle({
 export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const doc = useEditor((s) => s.doc)
   const selectedId = useEditor((s) => s.selectedId)
+  const duplicateBlock = useEditor((s) => s.duplicateBlock)
+  const removeBlock = useEditor((s) => s.removeBlock)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [ready, setReady] = useState(false)
   const [docHeight, setDocHeight] = useState(420)
@@ -136,7 +151,11 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const [active, setActive] = useState<ActiveDrag | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
+    useSensor(KeyboardSensor),
+  )
 
   const measure = useCallback(() => {
     const iframe = iframeRef.current
@@ -165,6 +184,33 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     setDocHeight(Math.max(420, idoc.documentElement.scrollHeight))
   }, [])
 
+  // Keep rects fresh on resize / content mutation without waiting for doc prop change
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+    const onResize = () => requestAnimationFrame(measure)
+    window.addEventListener('resize', onResize)
+    let ro: ResizeObserver | null = null
+    let mo: MutationObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(onResize)
+      ro.observe(iframe)
+      const idoc = iframe.contentDocument
+      if (idoc?.documentElement) ro.observe(idoc.documentElement)
+    }
+    // Fallback: observe iframe DOM mutations (image load, font load)
+    const idoc = iframe.contentDocument
+    if (idoc && typeof MutationObserver !== 'undefined') {
+      mo = new MutationObserver(onResize)
+      mo.observe(idoc.documentElement, { childList: true, subtree: true, attributes: true })
+    }
+    return () => {
+      window.removeEventListener('resize', onResize)
+      ro?.disconnect()
+      mo?.disconnect()
+    }
+  }, [measure, ready])
+
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
@@ -189,6 +235,23 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     idoc.close()
     requestAnimationFrame(measure)
   }, [doc, ready, measure])
+
+  // Auto-scroll newly selected block into view
+  useEffect(() => {
+    if (!selectedId || !ready) return
+    const idoc = iframeRef.current?.contentDocument
+    const el = idoc?.querySelector(`[data-et-block="${selectedId}"]`) as HTMLElement | null
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    // Also ensure canvas scroll container shows it
+    const scrollEl = document.getElementById('et-canvas-scroll')
+    const rect = blockRects.find((b) => b.id === selectedId)?.rect
+    if (!scrollEl || !rect) return
+    const viewTop = scrollEl.scrollTop
+    const viewH = scrollEl.clientHeight
+    if (rect.top < viewTop + 20 || rect.top + rect.height > viewTop + viewH - 20) {
+      scrollEl.scrollTo({ top: Math.max(0, rect.top - viewH / 2 + rect.height / 2), behavior: 'smooth' })
+    }
+  }, [selectedId, blockRects, ready])
 
   const resolveTarget = useCallback(
     (clientX: number, clientY: number, payload: ActiveDrag): DropTarget | null => {
@@ -225,17 +288,25 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
             : contentRect
         if (base) consider(0, Math.abs(y - (base.top + Math.min(base.height / 2, 40))))
       } else {
-        const rects = list
-          .map((b) => blockRects.find((br) => br.id === b.id)?.rect)
-          .filter((r): r is Rect => r !== undefined)
-        for (let i = 0; i < rects.length; i++) {
-          const r = rects[i]
+        // Iterate original list indices so missing rects don't shift drop indices
+        const rectMap = new Map(blockRects.map((br) => [br.id, br.rect] as const))
+        let lastVisibleIdx = -1
+        let lastVisibleRect: Rect | null = null
+        for (let i = 0; i < list.length; i++) {
+          const r = rectMap.get(list[i].id)
+          if (!r) continue
+          lastVisibleIdx = i
+          lastVisibleRect = r
           const mid = r.top + r.height / 2
           if (y < mid) {
             consider(i, Math.abs(y - r.top))
             break
           }
-          if (i === rects.length - 1) consider(i + 1, Math.abs(y - (r.top + r.height)))
+          if (i === list.length - 1) consider(i + 1, Math.abs(y - (r.top + r.height)))
+        }
+        // Edge: all rects missing but list non-empty -> fallback to last known rect bottom
+        if (best === null && lastVisibleRect !== null) {
+          consider(lastVisibleIdx + 1, Math.abs(y - (lastVisibleRect.top + lastVisibleRect.height)))
         }
       }
       return best
@@ -336,6 +407,14 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
           />
           {ready && (
             <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+              {doc.blocks.length === 0 && !active && (
+                <div className="absolute inset-0 flex items-center justify-center p-8" style={{ pointerEvents: 'none' }}>
+                  <div className="rounded-xl border-2 border-dashed border-ice-300 bg-white/80 px-6 py-8 text-center shadow-sm backdrop-blur">
+                    <p className="text-sm font-semibold text-ink-700">Drag blocks here</p>
+                    <p className="mt-1 text-xs text-ink-400">Try Header, Text, or Button from the palette</p>
+                  </div>
+                </div>
+              )}
               {blockRects.map(({ id, rect }) => (
                 <BlockHandle
                   key={id}
@@ -348,6 +427,52 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
                   onHover={setHoverId}
                 />
               ))}
+              {selectedId && !active &&
+                (() => {
+                  const r = blockRects.find((b) => b.id === selectedId)?.rect
+                  if (!r) return null
+                  return (
+                    <div
+                      className="absolute z-20 flex items-center gap-0.5 rounded-lg border border-ice-200 bg-white p-0.5 shadow-md"
+                      style={{ top: Math.max(4, r.top - 36), left: Math.max(4, r.left + r.width - 68), pointerEvents: 'auto' }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        title="Duplicate"
+                        aria-label="Duplicate block"
+                        onClick={() => duplicateBlock(selectedId)}
+                        className="rounded p-1.5 text-ink-500 hover:bg-ice-50 hover:text-ink-900"
+                      >
+                        <Copy className="size-3.5" />
+                      </button>
+                      <div className="h-4 w-px bg-ice-200" />
+                      <button
+                        type="button"
+                        title="Delete"
+                        aria-label="Delete block"
+                        onClick={() => {
+                          removeBlock(selectedId)
+                          onSelect(null)
+                        }}
+                        className="rounded p-1.5 text-ink-500 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  )
+                })()}
+              {dropTarget?.path.scope === 'column' &&
+                (() => {
+                  const cr = colRects.find((c) => c.id === dropTarget.path.blockId && c.column === dropTarget.path.column)?.rect
+                  return cr ? (
+                    <div
+                      className="absolute rounded-md border-2 border-dashed border-primary/50 bg-primary/5"
+                      style={{ top: cr.top, left: cr.left, width: cr.width, height: Math.max(cr.height, 56) }}
+                    />
+                  ) : null
+                })()}
               {indicator && (
                 <div
                   className="absolute z-10 h-[3px] rounded bg-primary"

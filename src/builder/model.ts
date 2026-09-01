@@ -306,7 +306,7 @@ export function allBlocks(doc: EmailDoc): Block[] {
  */
 export function migrateDoc(raw: unknown): EmailDoc {
   const doc = raw as EmailDoc
-  const s = doc.settings as Record<string, unknown>
+  const s = doc.settings as unknown as Record<string, unknown>
 
   // 5-C: rename outerBg → bodyBg
   if (s['outerBg'] !== undefined && s['bodyBg'] === undefined) {
@@ -328,7 +328,7 @@ export function migrateDoc(raw: unknown): EmailDoc {
   // Block field back-fills
   const migrate = (blocks: Block[]): void => {
     for (const b of blocks) {
-      const p = b.props as Record<string, unknown>
+      const p = b.props as unknown as Record<string, unknown>
       if (p['blockBg'] === undefined) p['blockBg'] = 'transparent'
       if (p['blockRadius'] === undefined) p['blockRadius'] = 0
       if (p['widthPct'] === undefined) p['widthPct'] = 100

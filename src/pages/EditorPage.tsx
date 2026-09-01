@@ -36,7 +36,6 @@ interface TemplateData {
 
 export default function EditorPage({ id }: { id: number }) {
   const load = useEditor((s) => s.load)
-  const doc = useEditor((s) => s.doc)
   const selectedId = useEditor((s) => s.selectedId)
   const select = useEditor((s) => s.select)
   const templateName = useEditor((s) => s.templateName)
