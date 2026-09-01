@@ -76,10 +76,12 @@ if [[ $SKIP_BUILD -eq 0 ]]; then
   cd "$BUILD_DIR"
   npm install --prefer-offline --no-audit --no-fund
 
-  echo "==> Building frontend (tsc + vite)"
-  # Invoke via `node` explicitly — avoids noexec issues on /tmp or restricted
-  # filesystems where the shebang-based .bin/* wrappers are blocked.
-  node node_modules/.bin/tsc --noEmit
+  echo "==> Building frontend (vite)"
+  # Note: tsc --noEmit is skipped here because TypeScript 7 ships a native Go
+  # binary (typescript-go) that requires /proc/self/exe, which is unavailable
+  # on SiteGround's container environment. Type-checking should be done locally
+  # or in CI before deploying. Vite uses esbuild for transpilation and builds
+  # successfully without tsc.
   node node_modules/.bin/vite build
 else
   echo "==> Skipping frontend build (--skip-build)"
