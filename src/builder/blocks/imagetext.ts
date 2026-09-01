@@ -50,27 +50,28 @@ export const imageTextDef: BlockDef = {
       : `<img src="${esc(props.imgSrc)}" alt="${esc(props.imgAlt)}" width="${props.imgWidth}" style="display:block;width:${props.imgWidth}px;max-width:100%;height:auto;border:0;">`
     const textCell = renderRich(props.text, props.linkColor)
     const half = Math.round(props.gap / 2)
-    const imgTd = `<td class="et-imgtext-img" valign="top" width="${props.imgWidth}" style="width:${props.imgWidth}px;padding-${props.imagePosition === 'left' ? 'right' : 'left'}:${half}px;display:table-cell;vertical-align:top;">${imgCell}</td>`
-    const textTd = `<td class="et-imgtext-text" valign="top" style="padding-${props.imagePosition === 'left' ? 'left' : 'right'}:${half}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};display:table-cell;vertical-align:top;">${textCell}</td>`
-    const cells = props.imagePosition === 'left' ? `${imgTd}${textTd}` : `${textTd}${imgTd}`
+    const imgFirst = props.imagePosition === 'left'
+    // et-imgtext-first marks whichever cell renders first, so the mobile rules
+    // can put the stacking gap below it whichever side the image is on.
+    const imgTd = `<td class="et-imgtext-img${imgFirst ? ' et-imgtext-first' : ''}" valign="top" width="${props.imgWidth}" style="width:${props.imgWidth}px;padding-${imgFirst ? 'right' : 'left'}:${half}px;display:table-cell;vertical-align:top;">${imgCell}</td>`
+    const textTd = `<td class="et-imgtext-text${imgFirst ? '' : ' et-imgtext-first'}" valign="top" style="padding-${imgFirst ? 'left' : 'right'}:${half}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};display:table-cell;vertical-align:top;">${textCell}</td>`
+    const cells = imgFirst ? `${imgTd}${textTd}` : `${textTd}${imgTd}`
     const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
     return `<tr${marker(block.id, ctx)}>
   <td class="et-imgtext" style="${tdStyle}">
-    <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><![endif]-->
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
       <tr>
         ${cells}
       </tr>
     </table>
-    <!--[if mso]></tr></table><![endif]-->
   </td>
 </tr>`
   },
   parse: (tr) => {
     const td = childTd(tr, 'et-imgtext')
     if (!td) return null
-    const imgTd = td.querySelector('td.et-imgtext-img') as HTMLElement | null
-    const textTd = td.querySelector('td.et-imgtext-text') as HTMLElement | null
+    const imgTd = td.querySelector('.et-imgtext-img') as HTMLElement | null
+    const textTd = td.querySelector('.et-imgtext-text') as HTMLElement | null
     if (!imgTd || !textTd) return null
     const img = imgTd.querySelector('img') as HTMLImageElement | null
     const tdSt = styleOf(td)
