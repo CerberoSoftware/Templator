@@ -17,6 +17,7 @@ import { FontsDialog } from '../components/builder/FontsDialog'
 import { componentHtmlToBlocks } from '../builder/componentCodec'
 import { cloneBlock } from '../builder/model'
 import { useComponents } from '../stores/components'
+import { useFonts } from '../stores/fonts'
 import type { DropTarget } from '../stores/editor'
 
 type Mode = 'design' | 'code' | 'preview'
@@ -52,6 +53,7 @@ export default function EditorPage({ id }: { id: number }) {
   const redo = useEditor((s) => s.redo)
   const canUndo = useEditor((s) => s.past.length > 0)
   const canRedo = useEditor((s) => s.future.length > 0)
+  const loadFonts = useFonts((s) => s.load)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>('design')
@@ -59,6 +61,10 @@ export default function EditorPage({ id }: { id: number }) {
   const [showExport, setShowExport] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showFonts, setShowFonts] = useState(false)
+
+  useEffect(() => {
+    void loadFonts()
+  }, [loadFonts])
 
   useEffect(() => {
     api
@@ -123,6 +129,10 @@ export default function EditorPage({ id }: { id: number }) {
       ) {
         e.preventDefault()
         useEditor.getState().removeBlock(selectedId)
+        select(null)
+      } else if (e.key === 'Escape' && selectedId) {
+        const t = e.target as HTMLElement | null
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
         select(null)
       }
     }
