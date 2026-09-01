@@ -5,18 +5,21 @@ require __DIR__ . '/app/bootstrap.php';
 
 use Et\Core\Router;
 
-if (PHP_SAPI === 'cli-server') {
-    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-    if (preg_match('#^/(static|uploads)/#', $path)) {
-        $file = __DIR__ . '/public' . $path;
-        $real = is_file($file) ? realpath($file) : false;
-        if ($real !== false && str_starts_with($real, __DIR__ . '/public')) {
-            header('Content-Type: ' . mime_for(pathinfo($real, PATHINFO_EXTENSION)));
-            header('Content-Length: ' . (string) filesize($real));
-            readfile($real);
-            exit;
-        }
+// Serve static assets via PHP to bypass SiteGround nginx DT (Deny Type) block
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+if (preg_match('#^/(static|uploads)/#', $path)) {
+    $file = __DIR__ . '/public' . $path;
+    $real = is_file($file) ? realpath($file) : false;
+    if ($real !== false && str_starts_with($real, __DIR__ . '/public')) {
+        $ext = pathinfo($real, PATHINFO_EXTENSION);
+        header('Content-Type: ' . mime_for($ext));
+        header('Content-Length: ' . (string) filesize($real));
+        header('Cache-Control: public, max-age=31536000, immutable');
+        readfile($real);
+        exit;
     }
+    http_response_code(404);
+    exit;
 }
 
 $router = new Router();
