@@ -8,6 +8,7 @@ export default defineConfig({
   publicDir: false,
   build: {
     outDir: 'public/assets',
+    assetsDir: '',
     emptyOutDir: true,
     manifest: true,
   },
