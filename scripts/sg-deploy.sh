@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# =============================================================================
+# sg-deploy.sh — Run this ON the SiteGround server to pull & deploy eTemplator
+# =============================================================================
+# Usage:
+#   bash sg-deploy.sh [--migrate] [--skip-build]
+#
+# Options:
+#   --migrate      Run scripts/migrate.php after pulling (recommended on first
+#                  deploy and whenever migrations/*.sql files have changed)
+#   --skip-build   Skip the frontend npm build step (useful if you only changed
+#                  PHP files and public/assets is already up to date)
+#
+# Prerequisites on the server:
+#   - git, node/npm (SiteGround provides Node via nvm; adjust NVM_DIR below)
+#   - app/config.php already created with DB creds + bcrypt password hash
+#     (php scripts/hash.php 'your-production-password')
+#
+# Safe to re-run: preserves app/config.php and public/uploads/ on every run.
+# =============================================================================
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# CONFIGURATION — edit these three values before first run
+# ---------------------------------------------------------------------------
+GITHUB_PAT="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"
+GITHUB_USER="CerberoUK"
+REPO="CerberoSoftware/eTemplator"
+
+# Absolute path to the app webroot on SiteGround
+# e.g. /home/customer/www/etemplator.yourdomain.com/public_html
+DEPLOY_DIR="/home/customer/www/etemplator.yourdomain.com/public_html"
+
+# PHP binary — SiteGround typically exposes php8.2 or php8.3
+PHP_BIN="${SG_PHP:-php8.2}"
+
+# Branch to deploy
+BRANCH="main"
+# ---------------------------------------------------------------------------
+
+# Parse flags
+RUN_MIGRATE=0
+SKIP_BUILD=0
+for arg in "$@"; do
+  case "$arg" in
+    --migrate)     RUN_MIGRATE=1 ;;
+    --skip-build)  SKIP_BUILD=1 ;;
+    *) echo "Unknown option: $arg"; exit 1 ;;
+  esac
+done
+
+CLONE_URL="https://${GITHUB_USER}:${GITHUB_PAT}@github.com/${REPO}.git"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+echo "==> Cloning ${REPO} (branch: ${BRANCH})"
+git clone --depth=1 --branch "$BRANCH" "$CLONE_URL" "$TMP_DIR"
+
+# ---------------------------------------------------------------------------
+# Build frontend
+# ---------------------------------------------------------------------------
+if [[ $SKIP_BUILD -eq 0 ]]; then
+  echo "==> Installing Node dependencies"
+  # Load nvm if present (SiteGround user-space Node)
+  NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "$NVM_DIR/nvm.sh"
+  fi
+
+  cd "$TMP_DIR"
+  npm install --prefer-offline --no-audit --no-fund
+
+  echo "==> Building frontend (tsc + vite)"
+  npm run build
+else
+  echo "==> Skipping frontend build (--skip-build)"
+  cd "$TMP_DIR"
+fi
+
+# ---------------------------------------------------------------------------
+# Sync to deploy directory
+# Preserves:
+#   app/config.php        — production credentials (never overwrite)
+#   public/uploads/       — user-uploaded assets (never overwrite)
+# ---------------------------------------------------------------------------
+echo "==> Syncing to ${DEPLOY_DIR}"
+mkdir -p "$DEPLOY_DIR"
+
+rsync -a --delete \
+  --exclude '.git/' \
+  --exclude 'node_modules/' \
+  --exclude 'src/' \
+  --exclude 'tests/' \
+  --exclude 'docker-compose.yml' \
+  --exclude 'docker/' \
+  --exclude 'scripts/sg-deploy.sh' \
+  --exclude '.DS_Store' \
+  --exclude 'public/uploads/' \
+  --exclude 'app/config.php' \
+  "$TMP_DIR/" "$DEPLOY_DIR/"
+
+# Ensure writable uploads directory exists
+mkdir -p "${DEPLOY_DIR}/public/uploads"
+
+# ---------------------------------------------------------------------------
+# Migrations
+# ---------------------------------------------------------------------------
+if [[ $RUN_MIGRATE -eq 1 ]]; then
+  echo "==> Running database migrations"
+  "$PHP_BIN" "${DEPLOY_DIR}/scripts/migrate.php"
+fi
+
+echo
+echo "==> Deploy complete."
+echo "    Smoke-test: curl -s https://yourdomain.com/api/health"
