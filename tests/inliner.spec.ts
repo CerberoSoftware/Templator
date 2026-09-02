@@ -44,7 +44,11 @@ describe('inlineCss', () => {
   it('round-trips the full builder pipeline', () => {
     const html = renderEmail(sampleDoc())
     const out = inlineCss(html)
-    expect(out).toContain('style="margin:0 0 12px;')
+    // Per-block paragraph spacing is written inline by renderRich…
+    expect(out).toContain('style="margin:0 0 18px"')
+    // …and the shared .et-p / .et-list rules still get folded into the markup.
+    expect(out).toContain('margin:0 0 12px')
+    expect(out).toContain('padding:0 0 0 24px')
     expect(out).toContain('@media only screen and (max-width: 620px)')
     expect(out).toContain('<!--[if mso]>')
     expect(out).toContain('<!--[if !mso]><!-- -->')

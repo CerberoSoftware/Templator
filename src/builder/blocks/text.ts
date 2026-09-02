@@ -1,10 +1,12 @@
 import type { TextProps } from '../model'
 import { DEFAULT_FONT, DEFAULT_LINK_COLOR } from '../model'
 import {
+  DEFAULT_PARAGRAPH_SPACING,
   alignOf,
   firstLinkColor,
   normalizeColor,
   paddingY,
+  paragraphSpacing,
   parseRichContent,
   px,
   renderRich,
@@ -17,9 +19,10 @@ export const textDef: BlockDef = {
   label: 'Text',
   category: 'Content',
   fields: [
-    { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Write your message…', help: 'Blank line = new paragraph. **bold**, *italic*, __underline__, ~~strike~~, [link](https://example.com) — or use the toolbar above' },
+    { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Write your message…', help: 'Blank line = new paragraph. `- item` = bullets, `1. item` = numbered. **bold**, *italic*, __underline__, ~~strike~~, [link](https://example.com) — or use the toolbar above' },
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 32, step: 1, unit: 'px' },
     { key: 'lineHeight', label: 'Line height', type: 'range', min: 1.1, max: 2.5, step: 0.1, unit: '×' },
+    { key: 'paragraphSpacing', label: 'Paragraph spacing', type: 'range', min: 0, max: 48, step: 2, unit: 'px' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
     { key: 'linkColor', label: 'Link color', type: 'color' },
@@ -36,6 +39,7 @@ export const textDef: BlockDef = {
     color: '#333333',
     align: 'left',
     linkColor: DEFAULT_LINK_COLOR,
+    paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
     paddingY: 12,
     paddingX: 24,
     ...COMMON_DEFAULTS,
@@ -48,7 +52,7 @@ export const textDef: BlockDef = {
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-text" style="${tdStyle}">
-    ${renderRich(props.content, props.linkColor)}
+    ${renderRich(props.content, props.linkColor, props.paragraphSpacing)}
   </td>
 </tr>`
   },
@@ -64,6 +68,7 @@ export const textDef: BlockDef = {
       color: normalizeColor(st.color || '#333333'),
       align: alignOf(td, 'left'),
       linkColor: firstLinkColor(td, DEFAULT_LINK_COLOR),
+      paragraphSpacing: paragraphSpacing(td, DEFAULT_PARAGRAPH_SPACING),
       paddingY: paddingY(st.padding, 12),
       paddingX: px(st.paddingLeft, 24),
       blockBg: 'transparent',

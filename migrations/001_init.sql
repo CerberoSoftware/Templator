@@ -42,13 +42,7 @@ CREATE TABLE IF NOT EXISTS settings (
     `value` LONGTEXT NOT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-INSERT INTO settings (`key`, `value`) VALUES ('brand_fonts', '[
-  {"name": "Arial", "stack": "Arial, Helvetica, sans-serif"},
-  {"name": "Helvetica", "stack": "Helvetica, Arial, sans-serif"},
-  {"name": "Georgia", "stack": "Georgia, serif"},
-  {"name": "Times New Roman", "stack": "\'Times New Roman\', Times, serif"},
-  {"name": "Trebuchet MS", "stack": "\'Trebuchet MS\', Tahoma, sans-serif"},
-  {"name": "Verdana", "stack": "Verdana, Geneva, sans-serif"},
-  {"name": "Tahoma", "stack": "Tahoma, Verdana, sans-serif"},
-  {"name": "Courier New", "stack": "\'Courier New\', Courier, monospace"}
-]') ON DUPLICATE KEY UPDATE `value` = `value`;
+-- Brand fonts start empty on purpose. The builder always offers the web-safe
+-- stacks from WEB_SAFE_FONTS (src/builder/model.ts); seeding the same eight
+-- here made every font picker list each family twice.
+INSERT INTO settings (`key`, `value`) VALUES ('brand_fonts', '[]') ON DUPLICATE KEY UPDATE `value` = `value`;
