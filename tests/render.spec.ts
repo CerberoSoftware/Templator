@@ -104,6 +104,7 @@ export function sampleDoc(): EmailDoc {
           width: 552,
           align: 'center',
           link: 'https://example.com',
+          fadeBottom: false,
           paddingY: 8,
           paddingX: 0,
           blockBg: 'transparent',
@@ -147,6 +148,7 @@ export function sampleDoc(): EmailDoc {
                 width: 240,
                 align: 'center',
                 link: '',
+                fadeBottom: false,
                 paddingY: 8,
                 paddingX: 0,
                 blockBg: 'transparent',
@@ -245,6 +247,21 @@ describe('renderEmail', () => {
     expect(html).toContain('<strong>bold</strong>')
     expect(html).toContain('<a href="https://example.com/go" class="et-link"')
     expect(html).toContain('Second paragraph after a blank line.')
+  })
+
+  it('applies a bottom fade mask to an image block when fadeBottom is enabled', () => {
+    const doc = sampleDoc()
+    const imageBlock = doc.blocks.find((b) => b.type === 'image')
+    if (imageBlock?.type !== 'image') throw new Error('expected an image block in sampleDoc')
+    imageBlock.props.fadeBottom = true
+    const html = renderEmail(doc)
+    expect(html).toContain('mask-image:linear-gradient(to bottom, black 82%, transparent 100%)')
+    expect(html).toContain('-webkit-mask-image:linear-gradient(to bottom, black 82%, transparent 100%)')
+  })
+
+  it('omits the fade mask from an image block by default', () => {
+    const html = renderEmail(sampleDoc())
+    expect(html).not.toContain('mask-image')
   })
 })
 

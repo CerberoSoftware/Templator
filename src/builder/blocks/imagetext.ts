@@ -2,7 +2,17 @@ import type { ImageTextProps } from '../model'
 import { DEFAULT_FONT, DEFAULT_LINK_COLOR } from '../model'
 import { firstLinkColor, normalizeColor, numAttr, paddingY, parseRichContent, px, renderRich, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
-import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef, type RenderCtx } from './types'
+import {
+  childTd,
+  marker,
+  COMMON_FIELDS,
+  COMMON_DEFAULTS,
+  outerTdStyle,
+  FADE_BOTTOM_MASK_CSS,
+  FADE_BOTTOM_CLASS,
+  type BlockDef,
+  type RenderCtx,
+} from './types'
 
 export const imageTextDef: BlockDef = {
   type: 'image_text',
@@ -17,6 +27,7 @@ export const imageTextDef: BlockDef = {
       { value: 'right', label: 'Right' },
     ] },
     { key: 'text', label: 'Text', type: 'textarea', placeholder: 'Write your copy…', help: 'Supports **bold**, *italic*, __underline__, ~~strike~~, [link](url) — or use the toolbar above' },
+    { key: 'fadeBottom', label: 'Fade bottom edge', type: 'toggle', help: 'Fade the image to transparent at the bottom' },
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 24, step: 1, unit: 'px' },
     { key: 'lineHeight', label: 'Line height', type: 'range', min: 1.1, max: 2.5, step: 0.1, unit: '×' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
@@ -41,13 +52,14 @@ export const imageTextDef: BlockDef = {
     gap: 16,
     paddingY: 16,
     paddingX: 24,
+    fadeBottom: false,
     ...COMMON_DEFAULTS,
   }),
   render: (block: { props: ImageTextProps; id: string }, ctx: RenderCtx) => {
     const props = block.props
     const imgCell = props.imgSrc === ''
       ? `<div style="background-color:#e7eef6;border:1px dashed #b3cbe8;border-radius:6px;color:#5c7793;font-family:Arial;font-size:12px;padding:20px 8px;text-align:center;width:${props.imgWidth}px;">Image</div>`
-      : `<img src="${esc(props.imgSrc)}" alt="${esc(props.imgAlt)}" width="${props.imgWidth}" style="display:block;width:${props.imgWidth}px;max-width:100%;height:auto;border:0;">`
+      : `<img src="${esc(props.imgSrc)}" alt="${esc(props.imgAlt)}" width="${props.imgWidth}"${props.fadeBottom ? ` class="${FADE_BOTTOM_CLASS}"` : ''} style="display:block;width:${props.imgWidth}px;max-width:100%;height:auto;border:0;${props.fadeBottom ? FADE_BOTTOM_MASK_CSS : ''}">`
     const textCell = renderRich(props.text, props.linkColor)
     const half = Math.round(props.gap / 2)
     const imgFirst = props.imagePosition === 'left'
@@ -82,6 +94,7 @@ export const imageTextDef: BlockDef = {
       imgAlt: img?.getAttribute('alt') ?? 'Image',
       imgWidth: img ? numAttr(img, 'width', 200) : 200,
       text: parseRichContent(textTd),
+      fadeBottom: img?.classList.contains(FADE_BOTTOM_CLASS) ?? false,
       fontSize: px(textSt.fontSize, 15),
       lineHeight: parseFloat(textSt.lineHeight) || 1.6,
       fontFamily: textSt.fontFamily || DEFAULT_FONT,

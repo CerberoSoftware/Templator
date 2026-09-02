@@ -31,6 +31,15 @@ describe('parseEmailHtml round-trip', () => {
     expect(parseEmailHtml('<!DOCTYPE html><html><body><p>legacy</p></body></html>')).toBeNull()
   })
 
+  it('round-trips the fadeBottom flag on image blocks', () => {
+    const doc = sampleDoc()
+    const imageBlock = doc.blocks.find((b) => b.type === 'image')
+    if (imageBlock?.type !== 'image') throw new Error('expected an image block in sampleDoc')
+    imageBlock.props.fadeBottom = true
+    const parsed = parseEmailHtml(renderEmail(doc, { markers: true }))
+    expect(parsed).toEqual(doc)
+  })
+
   it('wraps unknown rows as raw blocks', () => {
     const html = renderEmail({
       settings: sampleDoc().settings,

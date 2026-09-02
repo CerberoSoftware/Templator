@@ -70,6 +70,13 @@ export const COMMON_FIELDS: FieldDef[] = [
 /** Default values for the shared fields */
 export const COMMON_DEFAULTS = { blockBg: 'transparent', blockRadius: 0, widthPct: 100 }
 
+/** CSS mask that fades an image to transparent at its bottom edge. */
+export const FADE_BOTTOM_MASK_CSS =
+  '-webkit-mask-image:linear-gradient(to bottom, black 82%, transparent 100%);mask-image:linear-gradient(to bottom, black 82%, transparent 100%);'
+
+/** Marker class used to detect the fade-bottom effect when parsing imported HTML back into props. */
+export const FADE_BOTTOM_CLASS = 'et-fade-bottom'
+
 /**
  * Build the inline style string for a block's outer <td>.
  * Merges base style with blockBg / blockRadius / widthPct from props.
