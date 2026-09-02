@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { ImagePlus, Plus, Trash2, GripVertical, Bold, Italic, Underline, Strikethrough, Link2 } from 'lucide-react'
+import { ImagePlus, Plus, Trash2, GripVertical, Bold, Italic, Underline, Strikethrough, Link2, List, ListOrdered } from 'lucide-react'
 import type { FieldDef } from '../../builder/blocks'
-import { type Block } from '../../builder/model'
+import { type Block, DEFAULT_FONT } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
 import { findBlock } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
@@ -109,11 +109,16 @@ function ColorField({ value, onChange }: { value: string; onChange: (v: string) 
 function FontField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   useFonts((s) => s.brandFonts)
   const opts = fontOptions()
+  // A block may carry a stack that is no longer offered (a deleted brand font,
+  // or HTML imported from elsewhere). Keep it listed so the dropdown shows what
+  // the block actually uses instead of silently reading as the first entry.
+  const known = opts.some((f) => f.stack === value)
   const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none'
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} className={base}>
+      {!known && value !== '' && <option value={value}>{value}</option>}
       {opts.map((f) => (
-        <option key={f.name} value={f.stack}>
+        <option key={f.stack} value={f.stack}>
           {f.name}
         </option>
       ))}
@@ -214,6 +219,53 @@ function RichTextarea({ value, onChange, placeholder }: { value: string; onChang
       el.setSelectionRange(newStart, newEnd)
     })
   }
+  /**
+   * Turn the selected lines into a bulleted (`- `) or numbered (`1. `) list,
+   * or strip the markers again when every selected line already carries them.
+   * Works on whole lines, so a plain caret converts just the line it sits on.
+   */
+  const applyList = (kind: 'ul' | 'ol') => {
+    const el = ref.current
+    const cur = value ?? ''
+    const placeholder = kind === 'ul' ? '- List item' : '1. List item'
+    if (!el) {
+      onChange(cur === '' ? placeholder : `${cur.replace(/\n+$/, '')}\n\n${placeholder}`)
+      return
+    }
+    const lineStart = cur.lastIndexOf('\n', el.selectionStart - 1) + 1
+    const nextBreak = cur.indexOf('\n', el.selectionEnd)
+    const lineEnd = nextBreak === -1 ? cur.length : nextBreak
+    const lines = cur.slice(lineStart, lineEnd).split('\n')
+    const filled = lines.filter((l) => l.trim() !== '')
+
+    if (filled.length === 0) {
+      const newValue = cur.slice(0, lineStart) + placeholder + cur.slice(lineEnd)
+      onChange(newValue)
+      const from = lineStart + placeholder.indexOf(' ') + 1
+      requestAnimationFrame(() => {
+        el.focus()
+        el.setSelectionRange(from, lineStart + placeholder.length)
+      })
+      return
+    }
+
+    const marker = kind === 'ul' ? /^\s*[-\u2022]\s+/ : /^\s*\d{1,3}[.)]\s+/
+    const remove = filled.every((l) => marker.test(l))
+    let n = 0
+    const out = lines.map((line) => {
+      const bare = line.replace(/^\s*(?:[-\u2022]|\d{1,3}[.)])\s+/, '')
+      if (remove || bare.trim() === '') return bare
+      n += 1
+      return kind === 'ul' ? `- ${bare}` : `${n}. ${bare}`
+    })
+    const replacement = out.join('\n')
+    onChange(cur.slice(0, lineStart) + replacement + cur.slice(lineEnd))
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(lineStart, lineStart + replacement.length)
+    })
+  }
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const mod = e.metaKey || e.ctrlKey
     if (!mod) return
@@ -222,6 +274,10 @@ function RichTextarea({ value, onChange, placeholder }: { value: string; onChang
     else if (k === 'i') { e.preventDefault(); wrap('*', '*', 'italic') }
     else if (k === 'u') { e.preventDefault(); wrap('__', '__', 'underline') }
     else if (k === 'k') { e.preventDefault(); onLink() }
+    // Shift+digit reports the shifted character in e.key ('*', '&'), so match on
+    // e.code as well to keep the shortcut working on a US layout.
+    else if (e.shiftKey && (k === '8' || e.code === 'Digit8')) { e.preventDefault(); applyList('ul') }
+    else if (e.shiftKey && (k === '7' || e.code === 'Digit7')) { e.preventDefault(); applyList('ol') }
   }
   return (
     <div className="flex flex-col gap-1">
@@ -237,6 +293,13 @@ function RichTextarea({ value, onChange, placeholder }: { value: string; onChang
         </button>
         <button type="button" title="Strikethrough" aria-label="Strikethrough" onClick={() => wrap('~~', '~~', 'strike')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
           <Strikethrough className="size-3.5" />
+        </button>
+        <div className="mx-1 h-4 w-px bg-ice-200" />
+        <button type="button" title="Bulleted list (Ctrl+Shift+8)" aria-label="Bulleted list" onClick={() => applyList('ul')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
+          <List className="size-3.5" />
+        </button>
+        <button type="button" title="Numbered list (Ctrl+Shift+7)" aria-label="Numbered list" onClick={() => applyList('ol')} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-ink-900">
+          <ListOrdered className="size-3.5" />
         </button>
         <div className="mx-1 h-4 w-px bg-ice-200" />
         <button type="button" title="Hyperlink (Ctrl+K)" aria-label="Hyperlink" onClick={onLink} className="rounded p-1.5 text-ink-600 hover:bg-white hover:text-primary">
@@ -463,7 +526,7 @@ export function PropertiesPanel() {
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Typography</p>
             <Field
               def={{ key: 'fontFamily', label: 'Default font', type: 'font' }}
-              value={doc.settings.fontFamily ?? 'Arial, Helvetica, sans-serif'}
+              value={doc.settings.fontFamily ?? DEFAULT_FONT}
               onChange={(v) => updateSettings({ fontFamily: String(v) })}
             />
           </div>
@@ -505,7 +568,7 @@ function BlockPanel({
 
   const groupFor = (key: string): 'content' | 'appearance' | 'layout' => {
     if (['blockBg', 'blockRadius', 'widthPct', 'paddingY', 'paddingX', 'gap', 'ratio', 'width', 'height', 'fullWidth', 'radius'].includes(key)) return 'layout'
-    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'align', 'bgColor', 'bg', 'linkColor', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
+    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
     return 'content'
   }
   const groups: Record<string, typeof def.fields> = { content: [], appearance: [], layout: [] }

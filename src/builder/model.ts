@@ -1,3 +1,5 @@
+import { DEFAULT_PARAGRAPH_SPACING } from './htmlUtils'
+
 export type BlockType =
   | 'header'
   | 'heading'
@@ -72,6 +74,8 @@ export interface TextProps extends CommonBlockProps {
   color: string
   align: Align
   linkColor: string
+  /** Gap in px below each paragraph / list, except the last one */
+  paragraphSpacing: number
   paddingY: number
   paddingX: number
 }
@@ -203,14 +207,15 @@ export interface EmailDoc {
   blocks: Block[]
 }
 
-export const DEFAULT_FONT = 'Arial, Helvetica, sans-serif'
+export const DEFAULT_FONT = 'Helvetica, Arial, sans-serif'
 export const DEFAULT_LINK_COLOR = '#2b7fe0'
 export const DEFAULT_TEXT_COLOR = '#333333'
 export const HEADING_SIZES: Record<1 | 2 | 3, number> = { 1: 28, 2: 22, 3: 17 }
 
 export const WEB_SAFE_FONTS: Array<{ name: string; stack: string }> = [
-  { name: 'Arial', stack: 'Arial, Helvetica, sans-serif' },
+  // Helvetica first: it backs DEFAULT_FONT, so it heads every font picker.
   { name: 'Helvetica', stack: 'Helvetica, Arial, sans-serif' },
+  { name: 'Arial', stack: 'Arial, Helvetica, sans-serif' },
   { name: 'Georgia', stack: 'Georgia, serif' },
   { name: 'Times New Roman', stack: "'Times New Roman', Times, serif" },
   { name: 'Trebuchet MS', stack: "'Trebuchet MS', Tahoma, sans-serif" },
@@ -300,6 +305,7 @@ export function allBlocks(doc: EmailDoc): Block[] {
  *  - back-fills fontFamily / textColor / linkColor on settings
  *  - back-fills blockBg / blockRadius / widthPct on every block
  *  - back-fills paddingX on footer / social blocks that lacked it
+ *  - back-fills paragraphSpacing on text blocks
  *  - migrates legacy social `links` string → `socialLinks` array
  *  - back-fills social `layout` field
  * Safe to call on already-current docs.
@@ -332,6 +338,10 @@ export function migrateDoc(raw: unknown): EmailDoc {
       if (p['blockBg'] === undefined) p['blockBg'] = 'transparent'
       if (p['blockRadius'] === undefined) p['blockRadius'] = 0
       if (p['widthPct'] === undefined) p['widthPct'] = 100
+      // Paragraph spacing slider on text blocks
+      if (b.type === 'text' && p['paragraphSpacing'] === undefined) {
+        p['paragraphSpacing'] = DEFAULT_PARAGRAPH_SPACING
+      }
       // 5-B: paddingX on footer + social
       if ((b.type === 'footer' || b.type === 'social') && p['paddingX'] === undefined) {
         p['paddingX'] = 24

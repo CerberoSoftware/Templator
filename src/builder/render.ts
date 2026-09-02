@@ -1,4 +1,4 @@
-import type { EmailDoc } from './model'
+import { type EmailDoc, DEFAULT_FONT } from './model'
 import { makeRenderCtx, renderBlock } from './blocks'
 import { esc } from './htmlUtils'
 
@@ -11,6 +11,8 @@ export const MOBILE_BREAKPOINT = 620
  */
 export const BASE_STYLES = `
     .et-p { margin: 0 0 12px; }
+    .et-list { margin: 0 0 12px; padding: 0 0 0 24px; }
+    .et-li { margin: 0 0 4px; }
     .et-last { margin-bottom: 0; }
     .et-h { margin: 0; }
     .et-col { border-collapse: collapse; }
@@ -84,7 +86,7 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   // Sanitise user-controlled settings values before injecting into <style>.
   const safeLinkColor = safeCssValue(settings.linkColor ?? '#2b7fe0')
   const safeTextColor = safeCssValue(settings.textColor ?? '#333333')
-  const safeFontFamily = safeCssValue(settings.fontFamily ?? 'Arial, Helvetica, sans-serif')
+  const safeFontFamily = safeCssValue(settings.fontFamily ?? DEFAULT_FONT)
   const globalStyles = `a { color: ${safeLinkColor}; } body { color: ${safeTextColor}; font-family: ${safeFontFamily}; }`
   const bodyBg = settings.bodyBg ?? '#f4f8fc'
   const containerBg = settings.containerBg ?? '#ffffff'
