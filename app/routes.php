@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Et\Controllers\AssetsController;
 use Et\Controllers\AuthController;
 use Et\Controllers\ComponentsController;
+use Et\Controllers\QuickstartController;
 use Et\Controllers\SettingsController;
 use Et\Controllers\TemplatesController;
 
@@ -12,6 +13,7 @@ $templates = new TemplatesController();
 $assets = new AssetsController();
 $components = new ComponentsController();
 $settings = new SettingsController();
+$quickstart = new QuickstartController();
 
 $router->add('GET', '/api/health', static function (): void {
     \Et\Core\Response::ok(['status' => 'ok', 'time' => date('c')]);
@@ -47,3 +49,8 @@ $router->add('DELETE', '/api/components/:id', [$components, 'destroy']);
 
 $router->add('GET', '/api/settings', [$settings, 'index']);
 $router->add('PUT', '/api/settings', [$settings, 'update']);
+
+$router->add('GET', '/api/quickstart', [$quickstart, 'index']);
+$router->add('POST', '/api/quickstart', [$quickstart, 'store']);
+$router->add('PUT', '/api/quickstart/:id/lock', [$quickstart, 'lock']);
+$router->add('DELETE', '/api/quickstart/:id', [$quickstart, 'destroy']);

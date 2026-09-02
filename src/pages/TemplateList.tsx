@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FilePlus2, KeyRound, Lock, LogOut, Pencil, Palette, RotateCcw, Snowflake, Trash2, Unlock, XCircle, Zap } from 'lucide-react'
+import { FilePlus2, KeyRound, Lock, LogOut, Pencil, Palette, Rocket, RotateCcw, Snowflake, Trash2, Unlock, XCircle, Zap } from 'lucide-react'
 import { api } from '../api/client'
 import { formatDateTime } from '../lib/utils'
 import { navigate } from '../router'
@@ -91,6 +91,7 @@ export default function TemplateList() {
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [trashed, setTrashed] = useState<TrashedTemplateRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<TemplateRow | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [tab, setTab] = useState<Tab>('my-templates')
@@ -98,6 +99,10 @@ export default function TemplateList() {
   const [pwCurrent, setPwCurrent] = useState('')
   const [pwNext, setPwNext] = useState('')
   const [pwError, setPwError] = useState<string | null>(null)
+  const [addingToQuickstart, setAddingToQuickstart] = useState<TemplateRow | null>(null)
+  const [qsCategory, setQsCategory] = useState('Custom')
+  const [qsDescription, setQsDescription] = useState('')
+  const [qsSaving, setQsSaving] = useState(false)
 
   const load = async () => {
     try {
@@ -187,6 +192,24 @@ export default function TemplateList() {
       setTemplates((rows) => rows?.map((r) => (r.id === target.id ? { ...r, name } : r)) ?? null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to rename template')
+    }
+  }
+
+  const submitAddToQuickstart = async () => {
+    if (!addingToQuickstart) return
+    setQsSaving(true)
+    try {
+      await api.post('/api/quickstart', {
+        template_id: addingToQuickstart.id,
+        category: qsCategory.trim() || 'Custom',
+        description: qsDescription.trim(),
+      })
+      setNotice(`"${addingToQuickstart.name}" added to Quickstart.`)
+      setAddingToQuickstart(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to add template to Quickstart')
+    } finally {
+      setQsSaving(false)
     }
   }
 
@@ -281,6 +304,7 @@ export default function TemplateList() {
         </div>
 
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {notice && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</p>}
 
         {tab === 'my-templates' && (
           <>
@@ -346,6 +370,17 @@ export default function TemplateList() {
                           title="Rename"
                         >
                           <Pencil className="size-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAddingToQuickstart(t)
+                            setQsCategory('Custom')
+                            setQsDescription('')
+                          }}
+                          className="rounded-lg p-2 text-ink-600 transition hover:bg-ice-100"
+                          title="Add to Quickstart"
+                        >
+                          <Rocket className="size-4" />
                         </button>
                         <button
                           onClick={() => void toggleLock(t)}
@@ -439,6 +474,31 @@ export default function TemplateList() {
               <button onClick={() => void handleChangePw()}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
                 Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addingToQuickstart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-1 text-base font-semibold">Add to Quickstart</h2>
+            <p className="mb-4 text-sm text-ink-500">Adds "{addingToQuickstart.name}" to the Quickstart library so it can be reused to start new templates.</p>
+            <label className="mb-1 block text-xs font-medium text-ink-600">Category</label>
+            <input value={qsCategory} onChange={(e) => setQsCategory(e.target.value)} placeholder="Custom"
+              className="mb-3 w-full rounded-lg border border-ice-200 px-3 py-2 text-sm outline-none focus:border-primary" />
+            <label className="mb-1 block text-xs font-medium text-ink-600">Description (optional)</label>
+            <textarea value={qsDescription} onChange={(e) => setQsDescription(e.target.value)} rows={3}
+              className="mb-5 w-full resize-none rounded-lg border border-ice-200 px-3 py-2 text-sm outline-none focus:border-primary" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setAddingToQuickstart(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ice-100">
+                Cancel
+              </button>
+              <button onClick={() => void submitAddToQuickstart()} disabled={qsSaving}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50">
+                {qsSaving ? 'Adding…' : 'Add'}
               </button>
             </div>
           </div>
