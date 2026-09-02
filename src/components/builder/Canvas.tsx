@@ -307,25 +307,32 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
     const idoc = iframeRef.current?.contentDocument
     const el = idoc?.querySelector(`[data-et-block="${selectedId}"]`) as HTMLElement | null
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    // Also ensure canvas scroll container shows it
+    // Also ensure canvas scroll container shows it. blockRects are in the
+    // iframe's unscaled internal coordinates, but the scroll container's own
+    // metrics are in on-screen pixels of the zoomed layout, so scale up first.
     const scrollEl = document.getElementById('et-canvas-scroll')
     const rect = blockRects.find((b) => b.id === selectedId)?.rect
     if (!scrollEl || !rect) return
+    const top = rect.top * zoom
+    const height = rect.height * zoom
     const viewTop = scrollEl.scrollTop
     const viewH = scrollEl.clientHeight
-    if (rect.top < viewTop + 20 || rect.top + rect.height > viewTop + viewH - 20) {
-      scrollEl.scrollTo({ top: Math.max(0, rect.top - viewH / 2 + rect.height / 2), behavior: 'smooth' })
+    if (top < viewTop + 20 || top + height > viewTop + viewH - 20) {
+      scrollEl.scrollTo({ top: Math.max(0, top - viewH / 2 + height / 2), behavior: 'smooth' })
     }
-  }, [selectedId, blockRects, ready])
+  }, [selectedId, blockRects, ready, zoom])
 
   const resolveTarget = useCallback(
     (clientX: number, clientY: number, payload: ActiveDrag): DropTarget | null => {
       const iframe = iframeRef.current
       if (!iframe) return null
       const iframeRect = iframe.getBoundingClientRect()
-      // Convert to iframe-local coords — same space as the stored rects.
-      const x = clientX - iframeRect.left
-      const y = clientY - iframeRect.top
+      // Convert to iframe-local coords — same space as the stored rects. The
+      // iframe itself is visually scaled via a CSS transform (see the render
+      // below) while its internal layout — and every stored rect — stays at
+      // the unscaled size, so the screen-space delta needs dividing by zoom.
+      const x = (clientX - iframeRect.left) / zoom
+      const y = (clientY - iframeRect.top) / zoom
 
       const isTwocol =
         (payload.kind === 'new' && payload.type === 'twocol') ||
@@ -403,7 +410,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
       }
       return best
     },
-    [colRects, contentRect, doc, blockRects],
+    [colRects, contentRect, doc, blockRects, zoom],
   )
 
   const onDragStart = useCallback((_e: DragStartEvent) => {
@@ -478,8 +485,13 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => { setActive(null); setDropTarget(null) }}>
       <Palette />
+      {/* Non-scrolling wrapper: the zoom controls below are positioned against this
+          element rather than the scrollable pane inside it, so they stay anchored to
+          the bottom-right of the visible canvas viewport instead of scrolling away
+          with the email content. */}
+      <div className="relative flex flex-1">
       <div
-        className="relative flex flex-1 justify-center overflow-y-auto"
+        className="flex flex-1 justify-center overflow-y-auto"
         style={{ backgroundColor: canvasBg }}
         id="et-canvas-scroll"
         // Bug 4 fix: suppress the deselect-all click while a drag is in
@@ -488,8 +500,17 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
         // freshly-dropped block and requiring an extra click to re-select it.
         onClick={active ? undefined : () => onSelect(null)}
       >
-        {/* Wrapper is exactly the iframe width — overlay inset-0 aligns perfectly */}
-        <div className="relative my-6" style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, zoom: zoom } as React.CSSProperties}>
+        {/* Outer wrapper reserves the scaled footprint so the scroll container centers
+            and sizes around it correctly; the inner wrapper below stays laid out at the
+            true (unscaled) size and is visually scaled with a transform, so zooming
+            enlarges everything painted inside the iframe — text, images, spacing — the
+            way a browser's own zoom does, instead of just reflowing into a wider box
+            (which is what CSS `zoom` on the iframe's own box did previously). */}
+        <div className="relative my-6" style={{ width: doc.settings.contentWidth * zoom, height: docHeight * zoom }}>
+          <div
+            className="absolute left-0 top-0"
+            style={{ width: `${doc.settings.contentWidth}px`, height: docHeight, transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+          >
           <iframe
             ref={iframeRef}
             title="Email canvas"
@@ -594,8 +615,11 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
               )}
             </div>
           )}
+          </div>
         </div>
-        {/* Zoom controls — not scaled, anchored to scroll viewport's bottom-right, next to the right sidebar */}
+      </div>
+        {/* Zoom controls — anchored to the non-scrolling wrapper's bottom-right, next to the
+            right sidebar, so they stay put on screen as the canvas content is scrolled. */}
         <div className="pointer-events-auto absolute bottom-4 right-4 z-30 flex items-center gap-1 rounded-full border border-ice-200 bg-white px-1 py-1 shadow-lg">
           <button
             type="button"
