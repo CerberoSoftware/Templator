@@ -1,7 +1,7 @@
 import type { Block, TwoColProps } from '../model'
 import { paddingY, px, styleOf } from '../htmlUtils'
 import { directRows } from '../parser'
-import { childTd, colMarker, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef, type ParseCtx, type RenderCtx } from './types'
+import { childTd, colMarker, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef, type ParseCtx, type RenderCtx } from './types'
 
 const RATIOS: Record<TwoColProps['ratio'], [number, number]> = {
   '50-50': [50, 50],
@@ -103,7 +103,7 @@ export const twoColDef: BlockDef = {
       gap,
       paddingY: paddingY(st.padding, 8),
       paddingX: px(st.paddingLeft, 24),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
       columns: [parseColumn(col1), parseColumn(col2)],

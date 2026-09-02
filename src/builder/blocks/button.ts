@@ -2,7 +2,7 @@ import type { ButtonProps } from '../model'
 import { DEFAULT_FONT } from '../model'
 import { normalizeColor, paddingY, px, styleOf, alignOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
-import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
+import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef } from './types'
 
 const FONT_FIELD = { key: 'fontFamily', label: 'Font', type: 'font' } as const
 
@@ -86,7 +86,7 @@ export const buttonDef: BlockDef = {
       align: alignOf(td, 'center') as ButtonProps['align'],
       paddingY: paddingY(tdSt.padding, 12),
       paddingX: px(tdSt.paddingLeft, 24),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
     } satisfies ButtonProps

@@ -1,8 +1,8 @@
 import type { SocialProps, SocialLink } from '../model'
 import { DEFAULT_FONT } from '../model'
-import { paddingY, px, styleOf } from '../htmlUtils'
+import { normalizeColor, numAttr, paddingY, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
-import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, ALIGN_OPTIONS, type BlockDef } from './types'
+import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, ALIGN_OPTIONS, type BlockDef } from './types'
 
 // ── Supported platforms ────────────────────────────────────────────────────────────────────────────────────────
 export const SOCIAL_PLATFORMS = [
@@ -212,19 +212,28 @@ ${content}
 
     if (links.length === 0) return null
     const tdSt = styleOf(td)
+    // Read icon/label styling back from the first item's own markup instead
+    // of hardcoding defaults — every item is rendered with the same props,
+    // so the first one speaks for all of them.
+    const firstSvg = td.querySelector('svg')
+    const firstLabel = td.querySelector<HTMLElement>('span[style*="font-family"]')
+    const svgSt = firstSvg ? styleOf(firstSvg) : null
+    const labelSt = firstLabel ? styleOf(firstLabel) : null
     return {
       socialLinks: links,
       layout: isRow ? 'row' : 'column',
-      iconSize: 20,
-      showLabels: true,
+      // `width` on an <svg> is a bare number, not a CSS length — px() needs a
+      // "px" suffix to match, so it always fell through to the 20 default.
+      iconSize: firstSvg ? numAttr(firstSvg, 'width', 20) : 20,
+      showLabels: firstLabel !== null,
       align: (td.getAttribute('align') as 'left' | 'center' | 'right') ?? 'center',
-      iconColor: '#2b7fe0',
-      color: '#5c7793',
-      fontSize: 13,
-      fontFamily: DEFAULT_FONT,
+      iconColor: svgSt ? normalizeColor(svgSt.color || '#2b7fe0') : '#2b7fe0',
+      color: labelSt ? normalizeColor(labelSt.color || '#5c7793') : '#5c7793',
+      fontSize: labelSt ? px(labelSt.fontSize, 13) : 13,
+      fontFamily: (labelSt?.fontFamily) || DEFAULT_FONT,
       paddingY: paddingY(tdSt.padding, 16),
       paddingX: px(tdSt.paddingLeft, 24),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
     } satisfies SocialProps

@@ -1,4 +1,5 @@
 import type { Block, BlockType } from '../model'
+import { normalizeColor } from '../htmlUtils'
 
 export interface FieldDef {
   key: string
@@ -52,6 +53,20 @@ export function childTd(tr: Element, cls: string): HTMLElement | null {
     }
   }
   return null
+}
+
+/**
+ * Read a block's own background color back from its outer <td>, for
+ * round-tripping the shared `blockBg` field. Every block's render() writes
+ * blockBg onto this same <td> (via outerTdStyle), so parse() must read it
+ * back from there too — otherwise every re-import resets it to 'transparent'.
+ */
+export function parseBlockBg(td: Element): string {
+  const bg = (td as HTMLElement).style.backgroundColor
+  if (bg) return normalizeColor(bg)
+  const attr = td.getAttribute('bgcolor')
+  if (attr) return normalizeColor(attr)
+  return 'transparent'
 }
 
 export const ALIGN_OPTIONS = [

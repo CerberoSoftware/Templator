@@ -8,6 +8,7 @@ import {
   COMMON_FIELDS,
   COMMON_DEFAULTS,
   outerTdStyle,
+  parseBlockBg,
   FADE_BOTTOM_MASK_CSS,
   FADE_BOTTOM_CLASS,
   type BlockDef,
@@ -73,7 +74,7 @@ export const imageDef: BlockDef = {
       fadeBottom: img?.classList.contains(FADE_BOTTOM_CLASS) ?? false,
       paddingY: paddingY(st.padding, 8),
       paddingX: px(st.paddingLeft, 0),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
     } satisfies ImageProps
