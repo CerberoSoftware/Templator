@@ -10,13 +10,34 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # CONFIGURATION
 # ---------------------------------------------------------------------------
-GITHUB_PAT="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"
 GITHUB_USER="CerberoUK"
 REPO="CerberoSoftware/eTemplator"
 DEPLOY_DIR="/home/u1024-ybd75ecffzqg/www/etemplator.cerbero.co/public_html"
 PHP_BIN="${SG_PHP:-php-wrapper}"
 BRANCH="main"
+
+# This script itself gets rsynced into $DEPLOY_DIR/scripts (the webroot), so
+# the GitHub PAT must NOT be hardcoded here — it lives in a file outside the
+# webroot instead, e.g.:
+#   printf 'GITHUB_PAT=ghp_xxxxx\n' > "$HOME/.etemplator-deploy.env"
+#   chmod 600 "$HOME/.etemplator-deploy.env"
+SECRET_FILE="${SECRET_FILE:-$HOME/.etemplator-deploy.env}"
 # ---------------------------------------------------------------------------
+
+if [[ ! -f "$SECRET_FILE" ]]; then
+  echo "ERROR: secret file not found: ${SECRET_FILE}" >&2
+  echo "Create it (outside the webroot) with:" >&2
+  echo "  printf 'GITHUB_PAT=ghp_xxxxx\\n' > '${SECRET_FILE}'" >&2
+  echo "  chmod 600 '${SECRET_FILE}'" >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "$SECRET_FILE"
+
+if [[ -z "${GITHUB_PAT:-}" ]]; then
+  echo "ERROR: GITHUB_PAT is not set in ${SECRET_FILE}." >&2
+  exit 1
+fi
 
 RUN_MIGRATE=0
 SKIP_BUILD=0
