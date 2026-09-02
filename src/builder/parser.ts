@@ -36,7 +36,15 @@ export function parseEmailHtmlDetailed(html: string): ParseResult | null {
     if (block !== null) {
       blocks.push(block)
     } else {
-      blocks.push({ id: uid(), type: 'raw', props: { html: row.innerHTML.trim(), blockBg: 'transparent', blockRadius: 0, widthPct: 100 } })
+      // Use each cell's own innerHTML, not the row's — row.innerHTML includes
+      // the <td>...</td> wrapper(s), which the raw block's own render() then
+      // wraps in another <td class="et-raw">. A <td> can't nest inside a
+      // <td>, so the browser fosters the inner cell out as an unstyled
+      // sibling, leaving the raw block empty and the content adrift outside
+      // its intended container.
+      const cells = [...row.children].filter((c) => c.tagName === 'TD') as HTMLElement[]
+      const html = cells.length > 0 ? cells.map((td) => td.innerHTML.trim()).filter((s) => s !== '').join('\n') : row.innerHTML.trim()
+      blocks.push({ id: uid(), type: 'raw', props: { html, blockBg: 'transparent', blockRadius: 0, widthPct: 100 } })
       unmatched++
     }
   }

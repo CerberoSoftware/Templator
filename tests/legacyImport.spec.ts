@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cleanLegacy } from '../src/builder/legacyImport'
 import { parseEmailHtmlDetailed } from '../src/builder/parser'
+import { renderEmail } from '../src/builder/render'
 
 const NEWSLETTER = `<!DOCTYPE html>
 <html>
@@ -93,6 +94,10 @@ describe('cleanLegacy', () => {
     if (text?.type === 'text') {
       expect(text.props.content).toContain('**Save 30%**')
       expect(text.props.content).toContain('[our shop](https://example.com/shop)')
+      // Plain <p> tags with no `et-p` class (as legacy exports always have)
+      // must not leak into the parsed content as literal markup.
+      expect(text.props.content).not.toContain('<p')
+      expect(text.props.content).toBe('Warm deals for cold days. **Save 30%** today.\n\nVisit [our shop](https://example.com/shop).')
     }
   })
 
@@ -104,6 +109,23 @@ describe('cleanLegacy', () => {
       expect(text.props.fontFamily).toContain('Georgia')
       expect(text.props.fontSize).toBe(14)
     }
+  })
+
+  it('keeps unrecognized rows as raw HTML without nesting a <td> inside the raw block\'s own <td>', () => {
+    const cleaned = cleanLegacy(NEWSLETTER)
+    const parsed = parseEmailHtmlDetailed(cleaned.html)!
+    const raw = parsed.doc.blocks.find((b) => b.type === 'raw')
+    expect(raw).toBeDefined()
+    if (raw?.type === 'raw') {
+      // The stored html is the cell's own content, not `<td>…</td>` itself —
+      // otherwise rendering it inside the raw block's <td class="et-raw">
+      // nests a <td> inside a <td>, which browsers "fix" by fostering the
+      // content out as an unstyled sibling cell, leaving the raw block empty.
+      expect(raw.props.html).not.toMatch(/^<td[\s>]/)
+      expect(raw.props.html).toContain('two-column legacy row')
+    }
+    const rendered = renderEmail(parsed.doc, { markers: false })
+    expect(rendered).not.toContain('<td class="et-raw"><td')
   })
 
   it('normalizes non-600 content width with a warning', () => {
