@@ -26,8 +26,8 @@ export function renderInlineMarkup(escaped: string, linkColor: string): string {
 /** Default gap, in px, between paragraphs and lists inside a rich-text block. */
 export const DEFAULT_PARAGRAPH_SPACING = 12
 
-/** Gap, in px, between the items of a bulleted or numbered list. */
-const LIST_ITEM_SPACING = 4
+/** Default gap, in px, between the items of a bulleted or numbered list. */
+export const DEFAULT_LIST_ITEM_SPACING = 4
 
 /** `- item` or `\u2022 item` starts a bulleted list. `*` is deliberately excluded: it is the italic marker. */
 const BULLET_RE = /^[-\u2022]\s+(.+)$/
@@ -93,10 +93,16 @@ export function groupRichContent(content: string): RichGroup[] {
  * carries `.et-p`; the classes stay on the markup so the parser (and older
  * exported HTML) keeps working.
  */
-export function renderRich(content: string, linkColor: string, spacing: number = DEFAULT_PARAGRAPH_SPACING): string {
+export function renderRich(
+  content: string,
+  linkColor: string,
+  spacing: number = DEFAULT_PARAGRAPH_SPACING,
+  listItemSpacing: number = DEFAULT_LIST_ITEM_SPACING,
+): string {
   const groups = groupRichContent(content)
   if (groups.length === 0) return ''
   const gap = Number.isFinite(spacing) ? Math.max(0, Math.round(spacing)) : DEFAULT_PARAGRAPH_SPACING
+  const liGap = Number.isFinite(listItemSpacing) ? Math.max(0, Math.round(listItemSpacing)) : DEFAULT_LIST_ITEM_SPACING
   return groups
     .map((group, i) => {
       const isLast = i === groups.length - 1
@@ -110,7 +116,7 @@ export function renderRich(content: string, linkColor: string, spacing: number =
       const items = group.items
         .map(
           (item) =>
-            `<li class="et-li" style="margin:0 0 ${LIST_ITEM_SPACING}px;">${renderInlineMarkup(esc(item), linkColor)}</li>`,
+            `<li class="et-li" style="margin:0 0 ${liGap}px;">${renderInlineMarkup(esc(item), linkColor)}</li>`,
         )
         .join('')
       return `<${tag} class="et-list et-${tag}${lastCls}"${start} style="${margin}padding:0 0 0 24px;">${items}</${tag}>`
@@ -185,6 +191,22 @@ export function paragraphSpacing(container: Element, fallback: number): number {
     const shorthand = style.getPropertyValue('margin').split(/\s+/)
     if (shorthand.length >= 3) return px(shorthand[2], fallback)
   }
+  return fallback
+}
+
+/**
+ * Read back the gap between list items that renderRich() wrote on `<li>`
+ * elements. Falls back to the caller's default when there is no list, or the
+ * item carries no explicit margin (e.g. hand-authored HTML).
+ */
+export function listItemSpacing(container: Element, fallback: number): number {
+  const li = container.querySelector('li.et-li')
+  if (!li) return fallback
+  const style = styleOf(li)
+  const bottom = style.getPropertyValue('margin-bottom')
+  if (bottom !== '') return px(bottom, fallback)
+  const shorthand = style.getPropertyValue('margin').split(/\s+/)
+  if (shorthand.length >= 3) return px(shorthand[2], fallback)
   return fallback
 }
 

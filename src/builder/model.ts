@@ -1,4 +1,4 @@
-import { DEFAULT_PARAGRAPH_SPACING } from './htmlUtils'
+import { DEFAULT_LIST_ITEM_SPACING, DEFAULT_PARAGRAPH_SPACING } from './htmlUtils'
 
 export type BlockType =
   | 'header'
@@ -76,6 +76,8 @@ export interface TextProps extends CommonBlockProps {
   linkColor: string
   /** Gap in px below each paragraph / list, except the last one */
   paragraphSpacing: number
+  /** Gap in px below each item of a bulleted or numbered list */
+  listItemSpacing: number
   paddingY: number
   paddingX: number
 }
@@ -309,7 +311,7 @@ export function allBlocks(doc: EmailDoc): Block[] {
  *  - back-fills fontFamily / textColor / linkColor on settings
  *  - back-fills blockBg / blockRadius / widthPct on every block
  *  - back-fills paddingX on footer / social blocks that lacked it
- *  - back-fills paragraphSpacing on text blocks
+ *  - back-fills paragraphSpacing / listItemSpacing on text blocks
  *  - migrates legacy social `links` string → `socialLinks` array
  *  - back-fills social `layout` field
  * Safe to call on already-current docs.
@@ -345,6 +347,10 @@ export function migrateDoc(raw: unknown): EmailDoc {
       // Paragraph spacing slider on text blocks
       if (b.type === 'text' && p['paragraphSpacing'] === undefined) {
         p['paragraphSpacing'] = DEFAULT_PARAGRAPH_SPACING
+      }
+      // List item spacing slider on text blocks
+      if (b.type === 'text' && p['listItemSpacing'] === undefined) {
+        p['listItemSpacing'] = DEFAULT_LIST_ITEM_SPACING
       }
       // 5-B: paddingX on footer + social
       if ((b.type === 'footer' || b.type === 'social') && p['paddingX'] === undefined) {

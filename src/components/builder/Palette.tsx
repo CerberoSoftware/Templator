@@ -21,6 +21,7 @@ import { REGISTRY_ORDER } from '../../builder/blocks'
 import type { ActiveDrag } from './Canvas'
 import { useComponents } from '../../stores/components'
 import { useEditor } from '../../stores/editor'
+import { useResizableWidth } from './useResizableWidth'
 
 const ICONS: Record<BlockType, typeof Type> = {
   header: PanelTop,
@@ -106,6 +107,7 @@ export function Palette() {
   const loadComponents = useComponents((s) => s.load)
   const insertBlock = useEditor((s) => s.insertBlock)
   const [q, setQ] = useState('')
+  const { width, startResize } = useResizableWidth({ initial: 240, min: 180, max: 420, storageKey: 'et-palette-width' })
   useEffect(() => {
     void loadComponents()
   }, [loadComponents])
@@ -129,7 +131,8 @@ export function Palette() {
   }, [q, components])
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-5 overflow-y-auto border-r border-ice-200 bg-white px-3 py-4">
+    <div className="relative flex shrink-0" style={{ width }}>
+      <aside className="flex w-full flex-col gap-5 overflow-y-auto border-r border-ice-200 bg-white px-3 py-4">
       <div className="flex items-center justify-between px-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-400">Blocks</h2>
         <span className="text-[10px] text-ink-400">{filtered.length} types</span>
@@ -176,6 +179,14 @@ export function Palette() {
           <ComponentItem key={c.id} id={c.id} name={c.name} />
         ))}
       </div>
-    </aside>
+      </aside>
+      <div
+        onPointerDown={startResize('right')}
+        className="absolute right-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize touch-none hover:bg-primary/30 active:bg-primary/50"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize blocks panel"
+      />
+    </div>
   )
 }
