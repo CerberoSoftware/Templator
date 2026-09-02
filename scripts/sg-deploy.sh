@@ -57,6 +57,24 @@ fi
 echo "==> Syncing to ${DEPLOY_DIR}"
 mkdir -p "$DEPLOY_DIR"
 
+# mkdir -p is a no-op if $DEPLOY_DIR already existed, so it won't have caught
+# a pre-existing directory we can't actually traverse into (wrong owner/mode —
+# e.g. SiteGround pre-creating the webroot with different permissions when the
+# site/subdomain was set up). Catch that here with a clear diagnostic instead
+# of letting rsync fail deep inside its own transfer with a cryptic error.
+if ! ( cd "$DEPLOY_DIR" 2>/dev/null ); then
+  chmod u+rwx "$DEPLOY_DIR" 2>/dev/null || true
+fi
+if ! ( cd "$DEPLOY_DIR" 2>/dev/null ); then
+  echo "ERROR: cannot access ${DEPLOY_DIR} (permission denied)." >&2
+  echo "Current ownership/permissions:" >&2
+  ls -ld "$DEPLOY_DIR" "$(dirname "$DEPLOY_DIR")" >&2 || true
+  echo "Running as: $(id)" >&2
+  echo "Fix the directory's owner/permissions (e.g. via Site Tools > File Manager," >&2
+  echo "or 'chown \$(whoami) ${DEPLOY_DIR}' if you have the rights) and re-run." >&2
+  exit 1
+fi
+
 rsync -a --delete \
   --exclude '.DS_Store' \
   --exclude '*.log' \
