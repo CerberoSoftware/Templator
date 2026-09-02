@@ -74,6 +74,7 @@ export interface TextProps extends CommonBlockProps {
   color: string
   align: Align
   linkColor: string
+  linkUnderline: boolean
   /** Gap in px below each paragraph / list, except the last one */
   paragraphSpacing: number
   /** Gap in px below each item of a bulleted or numbered list */
@@ -351,6 +352,10 @@ export function migrateDoc(raw: unknown): EmailDoc {
       // List item spacing slider on text blocks
       if (b.type === 'text' && p['listItemSpacing'] === undefined) {
         p['listItemSpacing'] = DEFAULT_LIST_ITEM_SPACING
+      }
+      // Underline-links toggle on text blocks (previously always underlined)
+      if (b.type === 'text' && p['linkUnderline'] === undefined) {
+        p['linkUnderline'] = true
       }
       // 5-B: paddingX on footer + social
       if ((b.type === 'footer' || b.type === 'social') && p['paddingX'] === undefined) {

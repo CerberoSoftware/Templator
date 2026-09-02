@@ -12,14 +12,14 @@ export function unesc(s: string): string {
     .replace(/&nbsp;/g, ' ')
 }
 
-export function renderInlineMarkup(escaped: string, linkColor: string): string {
+export function renderInlineMarkup(escaped: string, linkColor: string, linkUnderline: boolean = true): string {
   return escaped
     .replace(/~~([^~]+)~~/g, '<s>$1</s>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/__([^_]+)__/g, '<u>$1</u>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, text: string, href: string) => {
-      return `<a href="${href}" class="et-link" style="color:${linkColor};text-decoration:underline;">${text}</a>`
+      return `<a href="${href}" class="et-link" style="color:${linkColor};text-decoration:${linkUnderline ? 'underline' : 'none'};">${text}</a>`
     })
 }
 
@@ -98,6 +98,7 @@ export function renderRich(
   linkColor: string,
   spacing: number = DEFAULT_PARAGRAPH_SPACING,
   listItemSpacing: number = DEFAULT_LIST_ITEM_SPACING,
+  linkUnderline: boolean = true,
 ): string {
   const groups = groupRichContent(content)
   if (groups.length === 0) return ''
@@ -109,14 +110,14 @@ export function renderRich(
       const lastCls = isLast ? ' et-last' : ''
       const margin = isLast ? 'margin:0;' : `margin:0 0 ${gap}px;`
       if (group.kind === 'p') {
-        return `<p class="et-p${lastCls}" style="${margin}">${renderInlineMarkup(esc(group.text), linkColor)}</p>`
+        return `<p class="et-p${lastCls}" style="${margin}">${renderInlineMarkup(esc(group.text), linkColor, linkUnderline)}</p>`
       }
       const tag = group.kind === 'ul' ? 'ul' : 'ol'
       const start = group.kind === 'ol' && group.start !== 1 ? ` start="${group.start}"` : ''
       const items = group.items
         .map(
           (item) =>
-            `<li class="et-li" style="margin:0 0 ${liGap}px;">${renderInlineMarkup(esc(item), linkColor)}</li>`,
+            `<li class="et-li" style="margin:0 0 ${liGap}px;">${renderInlineMarkup(esc(item), linkColor, linkUnderline)}</li>`,
         )
         .join('')
       return `<${tag} class="et-list et-${tag}${lastCls}"${start} style="${margin}padding:0 0 0 24px;">${items}</${tag}>`
@@ -231,6 +232,15 @@ export function firstLinkColor(container: Element, fallback: string): string {
   if (a) {
     const color = a.style.getPropertyValue('color')
     if (color !== '') return normalizeColor(color)
+  }
+  return fallback
+}
+
+export function firstLinkUnderline(container: Element, fallback: boolean): boolean {
+  const a = container.querySelector('a.et-link') as HTMLElement | null
+  if (a) {
+    const decoration = a.style.getPropertyValue('text-decoration')
+    if (decoration !== '') return decoration.trim() !== 'none'
   }
   return fallback
 }
