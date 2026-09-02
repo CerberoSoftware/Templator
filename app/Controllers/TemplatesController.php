@@ -69,10 +69,53 @@ final class TemplatesController
     public function destroy(Request $req, array $params): void
     {
         $id = (int) $params['id'];
-        if ((new TemplateRepository())->find($id) === null) {
+        $repo = new TemplateRepository();
+        $template = $repo->find($id);
+        if ($template === null) {
             Response::error(404, 'Template not found', 'not_found');
         }
-        (new TemplateRepository())->delete($id);
+        if ((bool) $template['locked']) {
+            Response::error(409, 'Template is locked. Unlock it before deleting.', 'locked');
+        }
+        $repo->softDelete($id);
+        Response::ok();
+    }
+
+    public function lock(Request $req, array $params): void
+    {
+        $id = (int) $params['id'];
+        $repo = new TemplateRepository();
+        if ($repo->find($id) === null) {
+            Response::error(404, 'Template not found', 'not_found');
+        }
+        $repo->setLocked($id, (bool) $req->input('locked', true));
+        Response::ok();
+    }
+
+    public function trash(): void
+    {
+        Response::ok((new TemplateRepository())->trashed());
+    }
+
+    public function restoreFromTrash(Request $req, array $params): void
+    {
+        $id = (int) $params['id'];
+        $repo = new TemplateRepository();
+        if ($repo->findTrashed($id) === null) {
+            Response::error(404, 'Template not found in recycle bin', 'not_found');
+        }
+        $repo->restore($id);
+        Response::ok();
+    }
+
+    public function purge(Request $req, array $params): void
+    {
+        $id = (int) $params['id'];
+        $repo = new TemplateRepository();
+        if ($repo->findTrashed($id) === null) {
+            Response::error(404, 'Template not found in recycle bin', 'not_found');
+        }
+        $repo->delete($id);
         Response::ok();
     }
 

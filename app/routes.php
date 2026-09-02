@@ -24,9 +24,13 @@ $router->add('POST', '/api/auth/change-password', [$auth, 'changePassword']);
 
 $router->add('GET', '/api/templates', [$templates, 'index']);
 $router->add('POST', '/api/templates', [$templates, 'store']);
+$router->add('GET', '/api/templates/trash', [$templates, 'trash']);
 $router->add('GET', '/api/templates/:id', [$templates, 'show']);
 $router->add('PUT', '/api/templates/:id', [$templates, 'update']);
 $router->add('DELETE', '/api/templates/:id', [$templates, 'destroy']);
+$router->add('PUT', '/api/templates/:id/lock', [$templates, 'lock']);
+$router->add('POST', '/api/templates/:id/restore', [$templates, 'restoreFromTrash']);
+$router->add('DELETE', '/api/templates/:id/permanent', [$templates, 'purge']);
 
 $router->add('GET', '/api/templates/:id/versions', [$templates, 'versions']);
 $router->add('GET', '/api/templates/:id/versions/:version', [$templates, 'version']);
