@@ -1,130 +1,20 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { FilePlus2, Eye, EyeOff } from 'lucide-react'
 import { QUICKSTART_TEMPLATES, QUICKSTART_CATEGORIES, type QuickstartTemplate } from '../data/quickstartTemplates'
-import { renderEmail } from '../builder/render'
 import { migrateDoc } from '../builder/model'
 import { api } from '../api/client'
 import { navigate } from '../router'
+import { TemplatePreview } from './TemplatePreview'
 
 const CATEGORY_ALL = 'All'
-// Width of the preview pane in px (matches card inner width at max-w-4xl / 2-col)
-const PREVIEW_WIDTH = 480
 // Visible height of the thumbnail
-const PREVIEW_HEIGHT = 260
+const PREVIEW_HEIGHT = 220
 
-/** Sandboxed, pointer-events-free live preview of an EmailDoc */
-function TemplatePreview({ template }: { template: QuickstartTemplate }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const outerRef = useRef<HTMLDivElement>(null)
-  const [docHeight, setDocHeight] = useState(900)
-  const [containerWidth, setContainerWidth] = useState(PREVIEW_WIDTH)
-  const [isVisible, setIsVisible] = useState(false)
-
+/** Live preview thumbnail for a quickstart template */
+function QuickstartPreview({ template }: { template: QuickstartTemplate }) {
   // Ensure doc is migrated so widthPct etc. match editor rendering
   const migrated = useMemo(() => migrateDoc(structuredClone(template.doc) as unknown), [template.doc])
-  const scale = containerWidth / migrated.settings.contentWidth
-  const html = useMemo(() => renderEmail(migrated), [migrated])
-
-  // Responsive scale via container width
-  useEffect(() => {
-    const el = outerRef.current
-    if (!el) return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width
-      if (w) setContainerWidth(Math.max(280, Math.round(w)))
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  // Lazy-load iframe when card enters viewport
-  useEffect(() => {
-    const el = outerRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true)
-      return
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setIsVisible(true)
-          io.disconnect()
-        }
-      },
-      { rootMargin: '200px' },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const iframe = iframeRef.current
-    if (!iframe || !isVisible) return
-    const onLoad = () => {
-      const idoc = iframe.contentDocument
-      const h = idoc?.documentElement.scrollHeight ?? idoc?.body.scrollHeight ?? 900
-      setDocHeight(Math.max(400, h))
-      // Observe future resizes (images, fonts)
-      if (idoc?.documentElement && typeof ResizeObserver !== 'undefined') {
-        const ro = new ResizeObserver(() => {
-          const nh = idoc.documentElement.scrollHeight || idoc.body.scrollHeight || h
-          setDocHeight(Math.max(400, nh))
-        })
-        ro.observe(idoc.documentElement)
-        return () => ro.disconnect()
-      }
-    }
-    iframe.addEventListener('load', onLoad)
-    return () => iframe.removeEventListener('load', onLoad)
-  }, [html, isVisible])
-
-  return (
-    // Outer clip — fixed visible size, now responsive
-    <div
-      ref={outerRef}
-      className="relative w-full overflow-hidden rounded-t-xl bg-[#f4f8fc]"
-      style={{ height: PREVIEW_HEIGHT }}
-    >
-      {isVisible ? (
-        <>
-          {/* Scaled wrapper */}
-          <div
-            style={{
-              width: migrated.settings.contentWidth,
-              height: docHeight,
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          >
-            <iframe
-              ref={iframeRef}
-              title={`Preview: ${template.name}`}
-              srcDoc={html}
-              sandbox="allow-same-origin"
-              scrolling="no"
-              loading="lazy"
-              style={{
-                width: migrated.settings.contentWidth,
-                height: docHeight,
-                border: 'none',
-                display: 'block',
-              }}
-            />
-          </div>
-          {/* Gradient fade at bottom to mask the cut-off */}
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-16"
-            style={{ background: 'linear-gradient(to bottom, transparent, rgba(244,248,252,0.95))' }}
-          />
-        </>
-      ) : (
-        <div className="flex h-full items-center justify-center text-xs text-ink-400">Loading preview…</div>
-      )}
-    </div>
-  )
+  return <TemplatePreview doc={migrated} title={template.name} height={PREVIEW_HEIGHT} />
 }
 
 interface Props {
@@ -239,7 +129,7 @@ export function QuickstartTab({ onCreated }: Props) {
       {visible.length === 0 ? (
         <p className="py-12 text-center text-sm text-ink-400">No templates in “{filter}”{query ? ` matching “${query}”` : ''} — try All.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2" role="list">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {visible.map((template) => {
             const isCreatingThis = creating === template.id
             const isExpanded = expandedId === template.id
@@ -251,7 +141,7 @@ export function QuickstartTab({ onCreated }: Props) {
                 className="group flex flex-col overflow-hidden rounded-2xl border border-ice-200 bg-white transition hover:border-primary hover:shadow-md focus-within:border-primary"
               >
                 {/* Live preview thumbnail */}
-                <TemplatePreview template={template} />
+                <QuickstartPreview template={template} />
 
                 {/* Card body */}
                 <div className="flex flex-col gap-2 p-4">
@@ -319,7 +209,7 @@ export function QuickstartTab({ onCreated }: Props) {
                 <p className="mt-2 text-xs text-ink-400">Subject: {expanded.doc.settings.subject} — {expanded.doc.settings.preheader}</p>
               </div>
               <div className="p-2">
-                <TemplatePreview template={expanded} />
+                <QuickstartPreview template={expanded} />
               </div>
             </div>
             <footer className="flex justify-end gap-2 border-t border-ice-200 p-4">
