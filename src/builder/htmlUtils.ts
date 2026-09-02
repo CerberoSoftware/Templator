@@ -149,7 +149,11 @@ function richText(html: string): string {
  * Code panel or an import preserves them.
  */
 export function parseRichContent(container: Element): string {
-  const blocks = [...container.querySelectorAll('p.et-p, ul, ol')].filter(
+  // Match any <p>/<ul>/<ol>, not just ones carrying the `et-p` class renderRich()
+  // writes: imported legacy HTML has plain <p> tags with no such class, and
+  // requiring it made every paragraph fall through to the raw-innerHTML branch
+  // below, which dumps the literal tag markup into the block's text content.
+  const blocks = [...container.querySelectorAll('p, ul, ol')].filter(
     (el) => el.parentElement?.closest('ul, ol') == null,
   )
   if (blocks.length === 0) {
