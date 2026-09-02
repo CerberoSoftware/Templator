@@ -33,7 +33,18 @@ export const BASE_STYLES = `
 export const RESPONSIVE_STYLES = `
     @media only screen and (max-width: ${MOBILE_BREAKPOINT}px) {
       .et-content { width: 100% !important; max-width: 100% !important; }
+      /* Forcing display:block on the outer .et-col table alone leaves its
+         <tr>/<td> children in table-row/table-cell display with no table
+         ancestor, so the browser wraps them in an anonymous table that
+         shrinks to fit its content (the column's own contents, e.g. a
+         narrow image) instead of stretching to the new 100% width — the
+         contents then sit flush left rather than honouring their own
+         centering. Un-tabling the row and cell too avoids that anonymous
+         wrapper so block-level width/margin rules apply as authored. */
       .et-col { width: 100% !important; max-width: 100% !important; display: block !important; float: none !important; }
+      .et-col > tbody { display: block !important; }
+      .et-col-row { display: block !important; }
+      .et-col-inner { display: block !important; width: 100% !important; box-sizing: border-box !important; }
       .et-imgtext-img, .et-imgtext-text { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
       /* Fixed gap: an !important rule in a shared <style> cannot read props.gap. */
       .et-imgtext-first { padding-bottom: 16px !important; }

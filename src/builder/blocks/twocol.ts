@@ -26,7 +26,7 @@ function renderColumn(
 ): string {
   const rows = blocks.map((b) => ctx.renderChild(b)).join('\n')
   return `<table role="presentation" width="${width}%" align="left" cellpadding="0" cellspacing="0" border="0" class="et-col ${cls}" style="width:${width}%;max-width:${width}%;border-collapse:collapse;">
-            <tr><td class="et-col-inner"${colMarker(id, col, ctx)} style="vertical-align:top;${innerPadding}">
+            <tr class="et-col-row"><td class="et-col-inner"${colMarker(id, col, ctx)} style="vertical-align:top;${innerPadding}">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="et-col-blocks">
 ${rows}
               </table>
