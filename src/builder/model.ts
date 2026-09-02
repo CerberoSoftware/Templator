@@ -88,6 +88,8 @@ export interface ImageProps extends CommonBlockProps {
   link: string
   paddingY: number
   paddingX: number
+  /** Fade the image to transparent at its bottom edge */
+  fadeBottom: boolean
 }
 
 export interface ButtonProps extends CommonBlockProps {
@@ -163,6 +165,8 @@ export interface ImageTextProps extends CommonBlockProps {
   gap: number
   paddingY: number
   paddingX: number
+  /** Fade the image to transparent at its bottom edge */
+  fadeBottom: boolean
 }
 
 export interface FooterProps extends CommonBlockProps {

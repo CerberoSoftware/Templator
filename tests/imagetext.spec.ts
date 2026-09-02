@@ -35,6 +35,7 @@ function imgTextDoc(imagePosition: ImageTextProps['imagePosition']): EmailDoc {
           gap: 16,
           paddingY: 16,
           paddingX: 24,
+          fadeBottom: false,
           blockBg: 'transparent',
           blockRadius: 0,
           widthPct: 100,
