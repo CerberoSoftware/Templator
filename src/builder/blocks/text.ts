@@ -5,6 +5,7 @@ import {
   DEFAULT_PARAGRAPH_SPACING,
   alignOf,
   firstLinkColor,
+  firstLinkUnderline,
   listItemSpacing,
   normalizeColor,
   paddingY,
@@ -29,6 +30,7 @@ export const textDef: BlockDef = {
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
     { key: 'linkColor', label: 'Link color', type: 'color' },
+    { key: 'linkUnderline', label: 'Underline links', type: 'toggle', help: 'Underline links' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
     { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
@@ -42,6 +44,7 @@ export const textDef: BlockDef = {
     color: '#333333',
     align: 'left',
     linkColor: DEFAULT_LINK_COLOR,
+    linkUnderline: true,
     paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
     listItemSpacing: DEFAULT_LIST_ITEM_SPACING,
     paddingY: 12,
@@ -56,7 +59,7 @@ export const textDef: BlockDef = {
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-text" style="${tdStyle}">
-    ${renderRich(props.content, props.linkColor, props.paragraphSpacing, props.listItemSpacing)}
+    ${renderRich(props.content, props.linkColor, props.paragraphSpacing, props.listItemSpacing, props.linkUnderline)}
   </td>
 </tr>`
   },
@@ -72,6 +75,7 @@ export const textDef: BlockDef = {
       color: normalizeColor(st.color || '#333333'),
       align: alignOf(td, 'left'),
       linkColor: firstLinkColor(td, DEFAULT_LINK_COLOR),
+      linkUnderline: firstLinkUnderline(td, true),
       paragraphSpacing: paragraphSpacing(td, DEFAULT_PARAGRAPH_SPACING),
       listItemSpacing: listItemSpacing(td, DEFAULT_LIST_ITEM_SPACING),
       paddingY: paddingY(st.padding, 12),

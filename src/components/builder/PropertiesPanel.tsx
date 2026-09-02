@@ -586,7 +586,7 @@ function BlockPanel({
 
   const groupFor = (key: string): 'content' | 'appearance' | 'layout' => {
     if (['blockBg', 'blockRadius', 'widthPct', 'paddingY', 'paddingX', 'gap', 'ratio', 'width', 'height', 'fullWidth', 'radius'].includes(key)) return 'layout'
-    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'listItemSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
+    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'listItemSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'linkUnderline', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
     return 'content'
   }
   const groups: Record<string, typeof def.fields> = { content: [], appearance: [], layout: [] }
