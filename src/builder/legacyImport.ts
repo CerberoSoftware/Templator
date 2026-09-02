@@ -106,6 +106,21 @@ interface TagStats {
   raw: number
 }
 
+/**
+ * Marker classes every block type's own render() writes on its row's <td>.
+ * Rows already carrying one of these (re-importing HTML the app itself
+ * exported) are left alone: heading/text/image/button/spacer are
+ * structurally distinct enough that re-running the heuristics below is
+ * harmless, but a footer's plain-paragraph content is structurally
+ * identical to a generic text block, so re-tagging it would add `et-text`
+ * alongside `et-footer` and — since text is matched first during parsing —
+ * silently reclassify the block, dropping its footer-specific styling.
+ */
+const KNOWN_BLOCK_CLASSES = [
+  'et-header', 'et-heading', 'et-text', 'et-image', 'et-btn-td', 'et-spacer',
+  'et-divider', 'et-social', 'et-footer', 'et-twocol', 'et-imgtext', 'et-raw',
+]
+
 function tagRows(content: HTMLTableElement): TagStats {
   const stats: TagStats = { text: 0, heading: 0, image: 0, button: 0, spacer: 0, raw: 0 }
   const rows = directRows(content)
@@ -116,6 +131,7 @@ function tagRows(content: HTMLTableElement): TagStats {
       continue
     }
     const td = tds[0] as HTMLElement
+    if (KNOWN_BLOCK_CLASSES.some((cls) => td.classList.contains(cls))) continue
     const children = [...td.children].filter((c) => !isLayoutNoise(c))
     const text = (td.textContent ?? '').trim()
 

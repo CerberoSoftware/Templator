@@ -14,7 +14,7 @@ import {
   renderRich,
   styleOf,
 } from '../htmlUtils'
-import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
+import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef } from './types'
 
 export const textDef: BlockDef = {
   type: 'text',
@@ -76,7 +76,7 @@ export const textDef: BlockDef = {
       listItemSpacing: listItemSpacing(td, DEFAULT_LIST_ITEM_SPACING),
       paddingY: paddingY(st.padding, 12),
       paddingX: px(st.paddingLeft, 24),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
     } satisfies TextProps

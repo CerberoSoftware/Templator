@@ -1,6 +1,6 @@
 import type { DividerProps } from '../model'
 import { normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
-import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
+import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef } from './types'
 
 export const dividerDef: BlockDef = {
   type: 'divider',
@@ -41,7 +41,7 @@ export const dividerDef: BlockDef = {
       thickness: m ? parseInt(m[1], 10) : 2,
       paddingY: paddingY(tdSt.padding, 16),
       paddingX: px(tdSt.paddingLeft, 24),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
     } satisfies DividerProps

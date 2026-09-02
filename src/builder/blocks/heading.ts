@@ -1,7 +1,7 @@
 import type { HeadingProps } from '../model'
 import { DEFAULT_FONT, HEADING_SIZES } from '../model'
 import { alignOf, normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
-import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, type BlockDef } from './types'
+import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef } from './types'
 import { esc } from '../htmlUtils'
 
 export const headingDef: BlockDef = {
@@ -43,7 +43,10 @@ export const headingDef: BlockDef = {
   parse: (tr) => {
     const td = childTd(tr, 'et-heading')
     if (!td) return null
-    const heading = td.querySelector('h1.et-h, h2.et-h, h3.et-h')
+    // Match any h1/h2/h3, not just one carrying the `et-h` class render()
+    // writes — a td already tagged `et-heading` (imported HTML, or an older
+    // export) can have a plain heading tag with no such class.
+    const heading = td.querySelector('h1, h2, h3')
     if (!heading) return null
     const level = parseInt(heading.tagName.slice(1), 10) as 1 | 2 | 3
     const st = styleOf(heading)
@@ -56,7 +59,7 @@ export const headingDef: BlockDef = {
       fontFamily: st.fontFamily || DEFAULT_FONT,
       paddingY: paddingY(tdSt.padding, 12),
       paddingX: px(tdSt.paddingLeft, 24),
-      blockBg: 'transparent',
+      blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
     } satisfies HeadingProps
