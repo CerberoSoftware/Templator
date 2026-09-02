@@ -12,6 +12,7 @@ import { blockToComponentHtml } from '../../builder/componentCodec'
 import { AssetPickerDialog } from './AssetPickerDialog'
 import { SOCIAL_PLATFORMS } from '../../builder/blocks/social'
 import type { SocialLink } from '../../builder/model'
+import { useResizableWidth } from './useResizableWidth'
 
 function NumberField({ def, value, onChange }: { def: FieldDef; value: number; onChange: (v: number) => void }) {
   return (
@@ -169,7 +170,14 @@ function UrlField({
 
 function RichTextarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null)
-  const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none resize-y font-mono text-xs'
+  const base = 'w-full rounded-lg border border-ice-200 bg-white px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none resize-none overflow-hidden font-mono text-xs'
+  // Auto-grow to fit content as the user types, instead of a fixed 5-row box.
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
   const wrap = (before: string, after: string, placeholderText = 'text') => {
     const el = ref.current
     const cur = value ?? ''
@@ -482,12 +490,21 @@ export function PropertiesPanel() {
   const updateSettings = useEditor((s) => s.updateSettings)
   const removeBlock = useEditor((s) => s.removeBlock)
   const duplicateBlock = useEditor((s) => s.duplicateBlock)
+  const { width, startResize } = useResizableWidth({ initial: 320, min: 240, max: 560, storageKey: 'et-properties-width' })
 
   const ref = selectedId ? findBlock(doc, selectedId) : null
   const block: Block | null = ref?.block ?? null
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-ice-200 bg-white">
+    <div className="relative flex shrink-0" style={{ width }}>
+      <div
+        onPointerDown={startResize('left')}
+        className="absolute left-0 top-0 z-10 h-full w-1.5 -translate-x-1/2 cursor-col-resize touch-none hover:bg-primary/30 active:bg-primary/50"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize properties panel"
+      />
+      <aside className="flex w-full flex-col overflow-y-auto border-l border-ice-200 bg-white">
       {block === null ? (
         <div className="flex flex-col gap-4 p-4">
           <h2 className="text-sm font-semibold">Email settings</h2>
@@ -544,7 +561,8 @@ export function PropertiesPanel() {
           duplicateBlock={duplicateBlock}
         />
       )}
-    </aside>
+      </aside>
+    </div>
   )
 }
 
@@ -568,7 +586,7 @@ function BlockPanel({
 
   const groupFor = (key: string): 'content' | 'appearance' | 'layout' => {
     if (['blockBg', 'blockRadius', 'widthPct', 'paddingY', 'paddingX', 'gap', 'ratio', 'width', 'height', 'fullWidth', 'radius'].includes(key)) return 'layout'
-    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
+    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'listItemSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
     return 'content'
   }
   const groups: Record<string, typeof def.fields> = { content: [], appearance: [], layout: [] }

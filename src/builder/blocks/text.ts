@@ -1,9 +1,11 @@
 import type { TextProps } from '../model'
 import { DEFAULT_FONT, DEFAULT_LINK_COLOR } from '../model'
 import {
+  DEFAULT_LIST_ITEM_SPACING,
   DEFAULT_PARAGRAPH_SPACING,
   alignOf,
   firstLinkColor,
+  listItemSpacing,
   normalizeColor,
   paddingY,
   paragraphSpacing,
@@ -23,6 +25,7 @@ export const textDef: BlockDef = {
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 32, step: 1, unit: 'px' },
     { key: 'lineHeight', label: 'Line height', type: 'range', min: 1.1, max: 2.5, step: 0.1, unit: '×' },
     { key: 'paragraphSpacing', label: 'Paragraph spacing', type: 'range', min: 0, max: 48, step: 2, unit: 'px' },
+    { key: 'listItemSpacing', label: 'List item spacing', type: 'range', min: 0, max: 32, step: 2, unit: 'px', help: 'Gap between bullets or numbered list items.' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
     { key: 'linkColor', label: 'Link color', type: 'color' },
@@ -40,6 +43,7 @@ export const textDef: BlockDef = {
     align: 'left',
     linkColor: DEFAULT_LINK_COLOR,
     paragraphSpacing: DEFAULT_PARAGRAPH_SPACING,
+    listItemSpacing: DEFAULT_LIST_ITEM_SPACING,
     paddingY: 12,
     paddingX: 24,
     ...COMMON_DEFAULTS,
@@ -52,7 +56,7 @@ export const textDef: BlockDef = {
     )
     return `<tr${marker(id, ctx)}>
   <td class="et-text" style="${tdStyle}">
-    ${renderRich(props.content, props.linkColor, props.paragraphSpacing)}
+    ${renderRich(props.content, props.linkColor, props.paragraphSpacing, props.listItemSpacing)}
   </td>
 </tr>`
   },
@@ -69,6 +73,7 @@ export const textDef: BlockDef = {
       align: alignOf(td, 'left'),
       linkColor: firstLinkColor(td, DEFAULT_LINK_COLOR),
       paragraphSpacing: paragraphSpacing(td, DEFAULT_PARAGRAPH_SPACING),
+      listItemSpacing: listItemSpacing(td, DEFAULT_LIST_ITEM_SPACING),
       paddingY: paddingY(st.padding, 12),
       paddingX: px(st.paddingLeft, 24),
       blockBg: 'transparent',

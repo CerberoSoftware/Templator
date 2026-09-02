@@ -595,8 +595,8 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
             </div>
           )}
         </div>
-        {/* Zoom controls — not scaled, anchored to scroll viewport */}
-        <div className="pointer-events-auto absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-ice-200 bg-white px-1 py-1 shadow-lg">
+        {/* Zoom controls — not scaled, anchored to scroll viewport's bottom-right, next to the right sidebar */}
+        <div className="pointer-events-auto absolute bottom-4 right-4 z-30 flex items-center gap-1 rounded-full border border-ice-200 bg-white px-1 py-1 shadow-lg">
           <button
             type="button"
             onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
