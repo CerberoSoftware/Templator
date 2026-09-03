@@ -44,7 +44,11 @@ export const RESPONSIVE_STYLES = `
       .et-col { width: 100% !important; max-width: 100% !important; display: block !important; float: none !important; }
       .et-col > tbody { display: block !important; }
       .et-col-row { display: block !important; }
-      .et-col-inner { display: block !important; width: 100% !important; box-sizing: border-box !important; }
+      .et-col-inner { display: block !important; width: 100% !important; box-sizing: border-box !important; padding-left: 0 !important; padding-right: 0 !important; }
+      /* Fixed gap: mirrors et-imgtext-first — the desktop side-by-side gap is
+         horizontal padding, which does nothing once the columns stack, so
+         give the first column a bottom gap instead. */
+      .et-col1 .et-col-inner { padding-bottom: 16px !important; }
       .et-imgtext-img, .et-imgtext-text { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
       /* Fixed gap: an !important rule in a shared <style> cannot read props.gap. */
       .et-imgtext-first { padding-bottom: 16px !important; }
