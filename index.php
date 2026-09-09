@@ -70,7 +70,7 @@ function serve_spa(): void
 
     if ($js === null) {
         http_response_code(503);
-        echo '<!doctype html><meta charset="utf-8"><title>eTemplator</title>'
+        echo '<!doctype html><meta charset="utf-8"><title>Templator 2</title>'
             . '<p style="font-family:system-ui;padding:2rem;color:#0F2540">Frontend is not built yet. '
             . 'Run <code>npm install &amp;&amp; npm run build</code> (or use the Vite dev server during development).</p>';
         exit;
@@ -79,7 +79,7 @@ function serve_spa(): void
     $links = implode('', array_map(fn ($href) => '<link rel="stylesheet" href="' . htmlspecialchars($href, ENT_QUOTES) . '">', $css));
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        . '<title>eTemplator</title>'
+        . '<title>Templator 2</title>'
         . '<link rel="icon" href="data:image/svg+xml,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232B7FE0" stroke-width="2"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M4.9 19.1L19.1 4.9"/></svg>') . '">'
         . $links
         . '</head><body><div id="root"></div>'

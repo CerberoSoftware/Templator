@@ -212,7 +212,7 @@ export default function TemplateList() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2.5">
             <Snowflake className="size-6 text-primary" />
-            <span className="text-lg font-bold tracking-tight">eTemplator</span>
+            <span className="text-lg font-bold tracking-tight">Templator 2</span>
           </div>
           <div className="flex items-center gap-1">
             <button
