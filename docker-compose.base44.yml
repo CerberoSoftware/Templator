@@ -1,6 +1,6 @@
 # Base44 development compose — runs the app from bind-mounted source with live reload.
 # Vite dev server (port 3000) is the public entry point; it proxies /api and /uploads
-# to the PHP backend service. MySQL is internal only.
+# to the PHP backend service. SQLite database file is stored in a named volume.
 services:
   web:
     image: node:22
@@ -29,17 +29,10 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+      - db-data:/app/data
     environment:
-      ET_DB_HOST: mysql
-      ET_DB_PORT: "3306"
-      ET_DB_USER: etemplator
-      ET_DB_PASS: etemplator
-      ET_DB_NAME: etemplator
-      ET_PASSWORD_HASH: "$$2y$$10$$iPN0wcsP/8mXdNMEHe/cE.oLPIdO7wOy2/CAltkhl42x.d/epPCEK"
+      ET_DB_PATH: /app/data/database.sqlite
     command: ["php", "-S", "0.0.0.0:80", "index.php"]
-    depends_on:
-      mysql:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "php -r 'exit(strpos((string)@file_get_contents(\"http://127.0.0.1:80/api/health\"), \"ok\") !== false ? 0 : 1);'"]
       interval: 3s
@@ -53,31 +46,10 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+      - db-data:/app/data
     environment:
-      ET_DB_HOST: mysql
-      ET_DB_PORT: "3306"
-      ET_DB_USER: etemplator
-      ET_DB_PASS: etemplator
-      ET_DB_NAME: etemplator
+      ET_DB_PATH: /app/data/database.sqlite
     command: ["php", "scripts/migrate.php"]
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_DATABASE: etemplator
-      MYSQL_USER: etemplator
-      MYSQL_PASSWORD: etemplator
-      MYSQL_ROOT_PASSWORD: root
-    volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
-      interval: 3s
-      timeout: 3s
-      retries: 30
 
 volumes:
-  mysql-data:
+  db-data:

@@ -31,7 +31,7 @@ final class SettingsRepository
     /** @param array<string, mixed> $values */
     public function save(array $values): void
     {
-        $stmt = $this->db->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)');
+        $stmt = $this->db->prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
         foreach ($values as $key => $value) {
             if (!in_array((string) $key, self::ALLOWED_KEYS, true)) {
                 continue;

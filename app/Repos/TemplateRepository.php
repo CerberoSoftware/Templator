@@ -78,7 +78,7 @@ final class TemplateRepository
 
     public function softDelete(int $id): void
     {
-        $stmt = $this->db->prepare('UPDATE templates SET deleted_at = NOW() WHERE id = ?');
+        $stmt = $this->db->prepare('UPDATE templates SET deleted_at = datetime(\'now\') WHERE id = ?');
         $stmt->execute([$id]);
     }
 
@@ -96,7 +96,7 @@ final class TemplateRepository
 
     public function purgeExpired(): void
     {
-        $stmt = $this->db->prepare('DELETE FROM templates WHERE deleted_at IS NOT NULL AND deleted_at < (NOW() - INTERVAL ' . self::TRASH_RETENTION_DAYS . ' DAY)');
+        $stmt = $this->db->prepare('DELETE FROM templates WHERE deleted_at IS NOT NULL AND deleted_at < datetime(\'now\', \'-' . self::TRASH_RETENTION_DAYS . ' days\')');
         $stmt->execute();
     }
 }
