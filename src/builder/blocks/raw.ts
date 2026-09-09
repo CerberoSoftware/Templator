@@ -7,7 +7,13 @@ export const rawDef: BlockDef = {
   label: 'Raw HTML',
   category: 'Structure',
   fields: [
-    { key: 'html', label: 'HTML', type: 'textarea', placeholder: '<p style="…">…</p>', help: 'Kept as-is on export. Use table-based markup for compatibility.' },
+    {
+      key: 'html',
+      label: 'HTML',
+      type: 'code',
+      placeholder: '<p style="…">…</p>',
+      help: 'Kept as-is on export. Use table-based markup for the widest client support.',
+    },
   ],
   defaults: (): RawProps => ({ html: '<p style="margin:0;font-family:Arial;font-size:14px;color:#333333;">Custom HTML block</p>', ...COMMON_DEFAULTS }),
   render: ({ props, id }: { props: RawProps; id: string }, ctx) => `<tr${marker(id, ctx)}>

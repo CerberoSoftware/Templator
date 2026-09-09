@@ -43,6 +43,7 @@ interface EditorState {
   duplicateBlock: (id: string) => void
   updateProps: (id: string, partial: Record<string, unknown>) => void
   updateSettings: (partial: Partial<EmailDoc['settings']>) => void
+  nudgeBlock: (id: string, delta: number) => void
   undo: () => void
   redo: () => void
   markSaved: (at: string) => void
@@ -259,6 +260,33 @@ export const useEditor = create<EditorState>((set) => ({
         return withoutHistory(doc)
       }
       return withHistory(state, doc)
+    }),
+
+  /**
+   * Nudge a block one position within its own list. The button route to
+   * reordering, since dragging is pointer-only.
+   */
+  nudgeBlock: (id, delta) =>
+    set((state) => {
+      const ref = findBlock(state.doc, id)
+      if (!ref) return {}
+      const next = ref.index + delta
+      if (next < 0 || next >= ref.blocks.length) return {}
+      const path: ListPath =
+        ref.container && ref.container.type === 'twocol'
+          ? { scope: 'column', blockId: ref.container.id, column: ref.columnIndex as 0 | 1 }
+          : { scope: 'root' }
+      const doc = structuredClone(state.doc)
+      const list = [...listFor(doc, path)]
+      const [moved] = list.splice(ref.index, 1)
+      list.splice(next, 0, moved)
+      if (path.scope === 'root') doc.blocks = list
+      else {
+        const containerRef = findBlock(doc, path.blockId!)
+        if (!containerRef || containerRef.block.type !== 'twocol') return {}
+        containerRef.block.columns[path.column ?? 0] = list
+      }
+      return { ...withHistory(state, doc), selectedId: id }
     }),
 
   undo: () =>

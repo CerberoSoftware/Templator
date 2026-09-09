@@ -1,5 +1,5 @@
 import type { Block, TwoColProps } from '../model'
-import { paddingY, px, styleOf } from '../htmlUtils'
+import { paddingBottom, paddingTop, paddingX, px, styleOf } from '../htmlUtils'
 import { directRows } from '../parser'
 import { childTd, colMarker, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef, type ParseCtx, type RenderCtx } from './types'
 
@@ -46,22 +46,24 @@ export const twoColDef: BlockDef = {
       { value: '60-40', label: '60 / 40' },
     ] },
     { key: 'gap', label: 'Gap', type: 'range', min: 0, max: 48, step: 2, unit: 'px' },
-    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingTop', label: 'Top padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingBottom', label: 'Bottom padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     ...COMMON_FIELDS,
   ],
   defaults: (): TwoColProps => ({
     ratio: '50-50',
     gap: 16,
-    paddingY: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
     paddingX: 24,
     ...COMMON_DEFAULTS,
   }),
   render: (block: Block & { type: 'twocol' }, ctx: RenderCtx) => {
     const props = block.props
-    const [w1, w2] = RATIOS[props.ratio]
+    const [w1, w2] = RATIOS[props.ratio] ?? RATIOS['50-50']
     const half = Math.round(props.gap / 2)
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
+    const tdStyle = outerTdStyle(`padding:${props.paddingTop}px ${props.paddingX}px ${props.paddingBottom}px;`, props, ctx.contentWidth)
     return `<tr${marker(block.id, ctx)}>
   <td class="et-twocol" style="${tdStyle}">
     <!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="${w1}%" valign="top"><![endif]-->
@@ -101,8 +103,9 @@ export const twoColDef: BlockDef = {
     return {
       ratio: widthToRatio(w1),
       gap,
-      paddingY: paddingY(st.padding, 8),
-      paddingX: px(st.paddingLeft, 24),
+      paddingTop: paddingTop(st.padding, 8),
+      paddingBottom: paddingBottom(st.padding, 8),
+      paddingX: px(st.paddingLeft, 0) || paddingX(st.padding, 24),
       blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,

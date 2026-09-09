@@ -50,3 +50,20 @@ describe('parseEmailHtml round-trip', () => {
     expect(parsed!.blocks[0].type).toBe('raw')
   })
 })
+
+describe('extracting document settings', () => {
+  it('reads the global rules from a later <style> tag', () => {
+    // The inliner consolidates rules into a <style> of its own, so the global
+    // body/link rules are not always in the first one. Use values that differ
+    // from the defaults, or a missed <style> would look like a match.
+    const doc = sampleDoc()
+    doc.settings.linkColor = '#7c3aed'
+    doc.settings.textColor = '#151828'
+    doc.settings.fontFamily = 'Georgia, serif'
+    const html = renderEmail(doc).replace('<head>', '<head>\n  <style>.et-p { margin: 0 0 12px; }</style>')
+    const parsed = parseEmailHtml(html)!
+    expect(parsed.settings.linkColor).toBe('#7c3aed')
+    expect(parsed.settings.textColor).toBe('#151828')
+    expect(parsed.settings.fontFamily).toBe('Georgia, serif')
+  })
+})

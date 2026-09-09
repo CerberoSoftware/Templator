@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { ImagePlus, Plus, Trash2, GripVertical, Bold, Italic, Underline, Strikethrough, Link2, List, ListOrdered } from 'lucide-react'
+import { ImagePlus, Plus, Trash2, GripVertical, Bold, Italic, Underline, Strikethrough, Link2, List, ListOrdered, ChevronUp, ChevronDown } from 'lucide-react'
 import type { FieldDef } from '../../builder/blocks'
-import { type Block, DEFAULT_FONT } from '../../builder/model'
+import { type Block, DEFAULT_FONT, DEFAULT_SETTINGS } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
 import { findBlock } from '../../builder/model'
 import { useEditor } from '../../stores/editor'
@@ -421,6 +421,18 @@ export function Field({ def, value, onChange, hideLabel }: { def: FieldDef; valu
     case 'textarea':
       control = <RichTextarea value={String(value ?? '')} onChange={(v) => onChange(v as string)} placeholder={def.placeholder} />
       break
+    case 'code':
+      control = (
+        <textarea
+          rows={8}
+          spellCheck={false}
+          placeholder={def.placeholder}
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${base} resize-y font-mono text-xs`}
+        />
+      )
+      break
     case 'number':
       control = <NumberField def={def} value={Number(value)} onChange={onChange} />
       break
@@ -490,6 +502,7 @@ export function PropertiesPanel() {
   const updateSettings = useEditor((s) => s.updateSettings)
   const removeBlock = useEditor((s) => s.removeBlock)
   const duplicateBlock = useEditor((s) => s.duplicateBlock)
+  const nudgeBlock = useEditor((s) => s.nudgeBlock)
   const { width, startResize } = useResizableWidth({ initial: 320, min: 240, max: 560, storageKey: 'et-properties-width' })
 
   const ref = selectedId ? findBlock(doc, selectedId) : null
@@ -519,6 +532,11 @@ export function PropertiesPanel() {
             def={{ key: 'contentWidth', label: 'Content width', type: 'range', min: 480, max: 720, step: 10, unit: 'px' }}
             value={doc.settings.contentWidth}
             onChange={(v) => updateSettings({ contentWidth: Math.max(480, Math.min(720, Number(v) || 600)) })}
+          />
+          <Field
+            def={{ key: 'containerRadius', label: 'Container radius', type: 'range', min: 0, max: 40, step: 2, unit: 'px' }}
+            value={doc.settings.containerRadius ?? DEFAULT_SETTINGS.containerRadius}
+            onChange={(v) => updateSettings({ containerRadius: Math.max(0, Number(v) || 0) })}
           />
 
           <div className="border-t border-ice-100 pt-2">
@@ -559,6 +577,7 @@ export function PropertiesPanel() {
           updateProps={updateProps}
           removeBlock={removeBlock}
           duplicateBlock={duplicateBlock}
+          nudgeBlock={nudgeBlock}
         />
       )}
       </aside>
@@ -571,11 +590,13 @@ function BlockPanel({
   updateProps,
   removeBlock,
   duplicateBlock,
+  nudgeBlock,
 }: {
   block: Block
   updateProps: (id: string, patch: Record<string, unknown>) => void
   removeBlock: (id: string) => void
   duplicateBlock: (id: string) => void
+  nudgeBlock: (id: string, delta: number) => void
 }) {
   const def = REGISTRY[block.type]
   const defaults = (REGISTRY[block.type].defaults() as Record<string, unknown>)
@@ -585,8 +606,8 @@ function BlockPanel({
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ content: true, appearance: true, layout: true })
 
   const groupFor = (key: string): 'content' | 'appearance' | 'layout' => {
-    if (['blockBg', 'blockRadius', 'widthPct', 'paddingY', 'paddingX', 'gap', 'ratio', 'width', 'height', 'fullWidth', 'radius'].includes(key)) return 'layout'
-    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'listItemSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'linkUnderline', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize'].includes(key)) return 'appearance'
+    if (['blockBg', 'blockRadius', 'widthPct', 'paddingTop', 'paddingBottom', 'paddingX', 'innerPadding', 'gap', 'ratio', 'width', 'height', 'fullWidth', 'radius', 'imgRadius'].includes(key)) return 'layout'
+    if (['color', 'fontFamily', 'fontSize', 'lineHeight', 'paragraphSpacing', 'listItemSpacing', 'align', 'bgColor', 'bg', 'linkColor', 'linkUnderline', 'iconColor', 'iconSize', 'showLabels', 'layout', 'level', 'thickness', 'taglineColor', 'taglineSize', 'bgColorEnd', 'accentColor', 'borderColor', 'labelColor'].includes(key)) return 'appearance'
     return 'content'
   }
   const groups: Record<string, typeof def.fields> = { content: [], appearance: [], layout: [] }
@@ -614,6 +635,24 @@ function BlockPanel({
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{def.label}</h2>
         <div className="flex gap-1">
+          <button
+            type="button"
+            title="Move up"
+            aria-label="Move block up"
+            onClick={() => nudgeBlock(block.id, -1)}
+            className="rounded p-1 text-ink-400 transition hover:bg-ice-50 hover:text-ink-700"
+          >
+            <ChevronUp className="size-4" />
+          </button>
+          <button
+            type="button"
+            title="Move down"
+            aria-label="Move block down"
+            onClick={() => nudgeBlock(block.id, 1)}
+            className="rounded p-1 text-ink-400 transition hover:bg-ice-50 hover:text-ink-700"
+          >
+            <ChevronDown className="size-4" />
+          </button>
           <button
             type="button"
             title="Duplicate block"

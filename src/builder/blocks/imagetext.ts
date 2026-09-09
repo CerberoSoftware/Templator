@@ -1,6 +1,21 @@
 import type { ImageTextProps } from '../model'
 import { DEFAULT_FONT, DEFAULT_LINK_COLOR } from '../model'
-import { firstLinkColor, normalizeColor, numAttr, paddingY, parseRichContent, px, renderRich, styleOf } from '../htmlUtils'
+import {
+  DEFAULT_LIST_ITEM_SPACING,
+  DEFAULT_PARAGRAPH_SPACING,
+  firstLinkColor,
+  firstLinkUnderline,
+  normalizeColor,
+  normalizeFontStack,
+  numAttr,
+  paddingBottom,
+  paddingTop,
+  paddingX,
+  parseRichContent,
+  px,
+  renderRich,
+  styleOf,
+} from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import {
   childTd,
@@ -28,14 +43,17 @@ export const imageTextDef: BlockDef = {
       { value: 'right', label: 'Right' },
     ] },
     { key: 'text', label: 'Text', type: 'textarea', placeholder: 'Write your copy…', help: 'Supports **bold**, *italic*, __underline__, ~~strike~~, [link](url) — or use the toolbar above' },
+    { key: 'imgRadius', label: 'Image radius', type: 'range', min: 0, max: 40, step: 2, unit: 'px' },
     { key: 'fadeBottom', label: 'Fade bottom edge', type: 'toggle', help: 'Fade the image to transparent at the bottom' },
     { key: 'fontSize', label: 'Font size', type: 'range', min: 10, max: 24, step: 1, unit: 'px' },
     { key: 'lineHeight', label: 'Line height', type: 'range', min: 1.1, max: 2.5, step: 0.1, unit: '×' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
     { key: 'linkColor', label: 'Link color', type: 'color' },
+    { key: 'linkUnderline', label: 'Underline links', type: 'toggle', help: 'Underline links' },
     { key: 'gap', label: 'Gap', type: 'range', min: 0, max: 48, step: 2, unit: 'px' },
-    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingTop', label: 'Top padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingBottom', label: 'Bottom padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     ...COMMON_FIELDS,
   ],
@@ -49,19 +67,23 @@ export const imageTextDef: BlockDef = {
     fontFamily: DEFAULT_FONT,
     color: '#333333',
     linkColor: DEFAULT_LINK_COLOR,
+    linkUnderline: true,
+    imgRadius: 0,
     imagePosition: 'left',
     gap: 16,
-    paddingY: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     paddingX: 24,
     fadeBottom: false,
     ...COMMON_DEFAULTS,
   }),
   render: (block: { props: ImageTextProps; id: string }, ctx: RenderCtx) => {
     const props = block.props
+    const radius = props.imgRadius > 0 ? `border-radius:${props.imgRadius}px;` : ''
     const imgCell = props.imgSrc === ''
       ? `<div style="background-color:#e7eef6;border:1px dashed #b3cbe8;border-radius:6px;color:#5c7793;font-family:Arial;font-size:12px;padding:20px 8px;text-align:center;width:${props.imgWidth}px;">Image</div>`
-      : `<img src="${esc(props.imgSrc)}" alt="${esc(props.imgAlt)}" width="${props.imgWidth}"${props.fadeBottom ? ` class="${FADE_BOTTOM_CLASS}"` : ''} style="display:block;width:${props.imgWidth}px;max-width:100%;height:auto;border:0;${props.fadeBottom ? FADE_BOTTOM_MASK_CSS : ''}">`
-    const textCell = renderRich(props.text, props.linkColor)
+      : `<img src="${esc(props.imgSrc)}" alt="${esc(props.imgAlt)}" width="${props.imgWidth}"${props.fadeBottom ? ` class="${FADE_BOTTOM_CLASS}"` : ''} style="display:block;width:${props.imgWidth}px;max-width:100%;height:auto;border:0;${radius}${props.fadeBottom ? FADE_BOTTOM_MASK_CSS : ''}">`
+    const textCell = renderRich(props.text, props.linkColor, DEFAULT_PARAGRAPH_SPACING, DEFAULT_LIST_ITEM_SPACING, props.linkUnderline)
     const half = Math.round(props.gap / 2)
     const imgFirst = props.imagePosition === 'left'
     // et-imgtext-first marks whichever cell renders first, so the mobile rules
@@ -69,7 +91,7 @@ export const imageTextDef: BlockDef = {
     const imgTd = `<td class="et-imgtext-img${imgFirst ? ' et-imgtext-first' : ''}" valign="top" width="${props.imgWidth}" style="width:${props.imgWidth}px;padding-${imgFirst ? 'right' : 'left'}:${half}px;display:table-cell;vertical-align:top;">${imgCell}</td>`
     const textTd = `<td class="et-imgtext-text${imgFirst ? '' : ' et-imgtext-first'}" valign="top" style="padding-${imgFirst ? 'left' : 'right'}:${half}px;font-family:${props.fontFamily};font-size:${props.fontSize}px;line-height:${props.lineHeight};color:${props.color};display:table-cell;vertical-align:top;">${textCell}</td>`
     const cells = imgFirst ? `${imgTd}${textTd}` : `${textTd}${imgTd}`
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
+    const tdStyle = outerTdStyle(`padding:${props.paddingTop}px ${props.paddingX}px ${props.paddingBottom}px;`, props, ctx.contentWidth)
     return `<tr${marker(block.id, ctx)}>
   <td class="et-imgtext" style="${tdStyle}">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
@@ -93,18 +115,21 @@ export const imageTextDef: BlockDef = {
     return {
       imgSrc: img?.getAttribute('src') ?? '',
       imgAlt: img?.getAttribute('alt') ?? 'Image',
+      imgRadius: img ? px(styleOf(img).borderRadius, 0) : 0,
       imgWidth: img ? numAttr(img, 'width', 200) : 200,
       text: parseRichContent(textTd),
       fadeBottom: img?.classList.contains(FADE_BOTTOM_CLASS) ?? false,
       fontSize: px(textSt.fontSize, 15),
       lineHeight: parseFloat(textSt.lineHeight) || 1.6,
-      fontFamily: textSt.fontFamily || DEFAULT_FONT,
+      fontFamily: normalizeFontStack(textSt.fontFamily, DEFAULT_FONT),
       color: normalizeColor(textSt.color || '#333333'),
       linkColor: firstLinkColor(textTd, DEFAULT_LINK_COLOR),
+      linkUnderline: firstLinkUnderline(textTd, true),
       imagePosition: imgFirst ? 'left' : 'right',
       gap: px(imgTd.style.paddingRight || imgTd.style.paddingLeft, 16) * 2,
-      paddingY: paddingY(tdSt.padding, 16),
-      paddingX: px(tdSt.paddingLeft, 24),
+      paddingTop: paddingTop(tdSt.padding, 16),
+      paddingBottom: paddingBottom(tdSt.padding, 16),
+      paddingX: px(tdSt.paddingLeft, 0) || paddingX(tdSt.padding, 24),
       blockBg: parseBlockBg(td),
       blockRadius: 0,
       // Bug 1 fix: widthPct was missing, causing custom block width to be

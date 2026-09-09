@@ -4,6 +4,7 @@ export type BlockType =
   | 'header'
   | 'heading'
   | 'text'
+  | 'callout'
   | 'image'
   | 'button'
   | 'spacer'
@@ -40,6 +41,8 @@ export interface EmailDocSettings {
   textColor: string
   /** Default link colour inherited by blocks that don't override */
   linkColor: string
+  /** Corner radius of the email container, in px */
+  containerRadius: number
 }
 
 export interface HeaderProps extends CommonBlockProps {
@@ -51,8 +54,11 @@ export interface HeaderProps extends CommonBlockProps {
   taglineColor: string
   taglineSize: number
   bgColor: string
+  /** Second colour for a gradient band. 'transparent' (or the same colour) = flat background. */
+  bgColorEnd: string
   align: Align
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -62,7 +68,8 @@ export interface HeadingProps extends CommonBlockProps {
   color: string
   align: Align
   fontFamily: string
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -79,7 +86,8 @@ export interface TextProps extends CommonBlockProps {
   paragraphSpacing: number
   /** Gap in px below each item of a bulleted or numbered list */
   listItemSpacing: number
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -89,7 +97,10 @@ export interface ImageProps extends CommonBlockProps {
   width: number
   align: Align
   link: string
-  paddingY: number
+  /** Corner radius applied to the image itself, in px */
+  radius: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
   /** Fade the image to transparent at its bottom edge */
   fadeBottom: boolean
@@ -107,7 +118,8 @@ export interface ButtonProps extends CommonBlockProps {
   fontSize: number
   fontFamily: string
   align: Align
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -119,7 +131,8 @@ export interface SpacerProps extends CommonBlockProps {
 export interface DividerProps extends CommonBlockProps {
   color: string
   thickness: number
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -143,14 +156,16 @@ export interface SocialProps extends CommonBlockProps {
   fontSize: number
   fontFamily: string
   align: Align
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
 export interface TwoColProps extends CommonBlockProps {
   ratio: '50-50' | '40-60' | '60-40'
   gap: number
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -164,9 +179,13 @@ export interface ImageTextProps extends CommonBlockProps {
   fontFamily: string
   color: string
   linkColor: string
+  linkUnderline: boolean
+  /** Corner radius applied to the image itself, in px */
+  imgRadius: number
   imagePosition: 'left' | 'right'
   gap: number
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
   /** Fade the image to transparent at its bottom edge */
   fadeBottom: boolean
@@ -177,9 +196,36 @@ export interface FooterProps extends CommonBlockProps {
   fontSize: number
   fontFamily: string
   color: string
+  linkColor: string
+  linkUnderline: boolean
   align: Align
   bgColor: string
-  paddingY: number
+  paddingTop: number
+  paddingBottom: number
+  paddingX: number
+}
+
+export interface CalloutProps extends CommonBlockProps {
+  /** Optional eyebrow label above the content */
+  label: string
+  content: string
+  /** Colour of the thicker bar down the left edge. 'transparent' = no bar. */
+  accentColor: string
+  bgColor: string
+  /** Colour of the 1px border around the card. 'transparent' = no border. */
+  borderColor: string
+  radius: number
+  fontSize: number
+  lineHeight: number
+  fontFamily: string
+  color: string
+  linkColor: string
+  labelColor: string
+  align: Align
+  /** Padding inside the card, in px */
+  innerPadding: number
+  paddingTop: number
+  paddingBottom: number
   paddingX: number
 }
 
@@ -199,6 +245,7 @@ export type Block =
   | (BlockBase & { type: 'header'; props: HeaderProps })
   | (BlockBase & { type: 'heading'; props: HeadingProps })
   | (BlockBase & { type: 'text'; props: TextProps })
+  | (BlockBase & { type: 'callout'; props: CalloutProps })
   | (BlockBase & { type: 'image'; props: ImageProps })
   | (BlockBase & { type: 'button'; props: ButtonProps })
   | (BlockBase & { type: 'spacer'; props: SpacerProps })
@@ -246,6 +293,7 @@ export const DEFAULT_SETTINGS: EmailDocSettings = {
   fontFamily: DEFAULT_FONT,
   textColor: DEFAULT_TEXT_COLOR,
   linkColor: DEFAULT_LINK_COLOR,
+  containerRadius: 10,
 }
 
 export function emptyDoc(): EmailDoc {
@@ -309,42 +357,61 @@ export function allBlocks(doc: EmailDoc): Block[] {
  * Handles:
  *  - outerBg → bodyBg  (5-C rename)
  *  - contentBg → containerBg  (5-C rename)
- *  - back-fills fontFamily / textColor / linkColor on settings
+ *  - back-fills fontFamily / textColor / linkColor / containerRadius on settings
  *  - back-fills blockBg / blockRadius / widthPct on every block
+ *  - splits the old single `paddingY` into `paddingTop` / `paddingBottom`
  *  - back-fills paddingX on footer / social blocks that lacked it
  *  - back-fills paragraphSpacing / listItemSpacing on text blocks
+ *  - back-fills the image / image+text corner radius and link-underline toggles
+ *  - back-fills the header gradient end and the footer link colour
  *  - migrates legacy social `links` string → `socialLinks` array
  *  - back-fills social `layout` field
- * Safe to call on already-current docs.
+ * Safe to call on already-current docs, and defensive about malformed input:
+ * anything that isn't a usable doc comes back as an empty one.
  */
 export function migrateDoc(raw: unknown): EmailDoc {
-  const doc = raw as EmailDoc
-  const s = doc.settings as unknown as Record<string, unknown>
+  const input = raw as { settings?: Record<string, unknown>; blocks?: unknown } | null
+  if (!input || typeof input !== 'object' || !Array.isArray(input.blocks)) return emptyDoc()
+  const s: Record<string, unknown> = { ...DEFAULT_SETTINGS, ...(input.settings ?? {}) }
+  const doc = { settings: s as unknown as EmailDocSettings, blocks: input.blocks as Block[] }
 
   // 5-C: rename outerBg → bodyBg
-  if (s['outerBg'] !== undefined && s['bodyBg'] === undefined) {
+  if (s['outerBg'] !== undefined && input.settings?.['bodyBg'] === undefined) {
     s['bodyBg'] = s['outerBg']
   }
-  if (s['bodyBg'] === undefined) s['bodyBg'] = '#f4f8fc'
-
   // 5-C: rename contentBg → containerBg
-  if (s['contentBg'] !== undefined && s['containerBg'] === undefined) {
+  if (s['contentBg'] !== undefined && input.settings?.['containerBg'] === undefined) {
     s['containerBg'] = s['contentBg']
   }
-  if (s['containerBg'] === undefined) s['containerBg'] = '#ffffff'
+  delete s['outerBg']
+  delete s['contentBg']
 
-  // Global typography defaults
+  // Global typography and container defaults
+  if (!s['bodyBg']) s['bodyBg'] = DEFAULT_SETTINGS.bodyBg
+  if (!s['containerBg']) s['containerBg'] = DEFAULT_SETTINGS.containerBg
   if (!s['fontFamily']) s['fontFamily'] = DEFAULT_FONT
   if (!s['textColor']) s['textColor'] = DEFAULT_TEXT_COLOR
   if (!s['linkColor']) s['linkColor'] = DEFAULT_LINK_COLOR
+  if (!Number.isFinite(s['contentWidth'])) s['contentWidth'] = DEFAULT_SETTINGS.contentWidth
+  if (!Number.isFinite(s['containerRadius'])) s['containerRadius'] = DEFAULT_SETTINGS.containerRadius
 
   // Block field back-fills
   const migrate = (blocks: Block[]): void => {
     for (const b of blocks) {
-      const p = b.props as unknown as Record<string, unknown>
+      const p = (b.props ?? ((b as { props: unknown }).props = {})) as unknown as Record<string, unknown>
       if (p['blockBg'] === undefined) p['blockBg'] = 'transparent'
       if (p['blockRadius'] === undefined) p['blockRadius'] = 0
       if (p['widthPct'] === undefined) p['widthPct'] = 100
+      // The builder used to expose a single "Vertical padding" slider stored as
+      // `paddingY`. It was split into separate `paddingTop` / `paddingBottom`
+      // fields, so carry any saved `paddingY` value forward into both —
+      // otherwise reopened templates lose their padding (the sliders read 0 and
+      // the rendered `padding:` shorthand drops to `undefinedpx`).
+      if (p['paddingY'] !== undefined) {
+        if (p['paddingTop'] === undefined) p['paddingTop'] = p['paddingY']
+        if (p['paddingBottom'] === undefined) p['paddingBottom'] = p['paddingY']
+        delete p['paddingY']
+      }
       // Paragraph spacing slider on text blocks
       if (b.type === 'text' && p['paragraphSpacing'] === undefined) {
         p['paragraphSpacing'] = DEFAULT_PARAGRAPH_SPACING
@@ -353,10 +420,20 @@ export function migrateDoc(raw: unknown): EmailDoc {
       if (b.type === 'text' && p['listItemSpacing'] === undefined) {
         p['listItemSpacing'] = DEFAULT_LIST_ITEM_SPACING
       }
-      // Underline-links toggle on text blocks (previously always underlined)
-      if (b.type === 'text' && p['linkUnderline'] === undefined) {
+      // Underline-links toggle (previously always underlined)
+      if ((b.type === 'text' || b.type === 'image_text') && p['linkUnderline'] === undefined) {
         p['linkUnderline'] = true
       }
+      // Footer link styling — links used to be rendered in the body text colour
+      if (b.type === 'footer') {
+        if (p['linkColor'] === undefined) p['linkColor'] = p['color'] ?? DEFAULT_LINK_COLOR
+        if (p['linkUnderline'] === undefined) p['linkUnderline'] = true
+      }
+      // Corner radius on the image itself
+      if (b.type === 'image' && p['radius'] === undefined) p['radius'] = 0
+      if (b.type === 'image_text' && p['imgRadius'] === undefined) p['imgRadius'] = 0
+      // Header gradient band — flat background until a second colour is picked
+      if (b.type === 'header' && p['bgColorEnd'] === undefined) p['bgColorEnd'] = 'transparent'
       // 5-B: paddingX on footer + social
       if ((b.type === 'footer' || b.type === 'social') && p['paddingX'] === undefined) {
         p['paddingX'] = 24
@@ -388,6 +465,9 @@ export function migrateDoc(raw: unknown): EmailDoc {
         if (p['layout'] === undefined) p['layout'] = 'column'
       }
       if (b.type === 'twocol') {
+        if (!Array.isArray(b.columns)) b.columns = [[], []]
+        b.columns[0] = b.columns[0] ?? []
+        b.columns[1] = b.columns[1] ?? []
         migrate(b.columns[0])
         migrate(b.columns[1])
       }

@@ -1,7 +1,7 @@
 import type { Block, EmailDoc, EmailDocSettings } from './model'
 import { DEFAULT_FONT, DEFAULT_LINK_COLOR, DEFAULT_SETTINGS, DEFAULT_TEXT_COLOR, uid } from './model'
 import { makeParseCtx } from './blocks'
-import { normalizeColor } from './htmlUtils'
+import { normalizeColor, px } from './htmlUtils'
 
 export function directRows(table: Element): Element[] {
   const out: Element[] = []
@@ -69,7 +69,9 @@ function extractSettings(doc: Document, content: HTMLElement): EmailDocSettings 
   let fontFamily: string = DEFAULT_FONT
   let textColor: string = DEFAULT_TEXT_COLOR
   let linkColor: string = DEFAULT_LINK_COLOR
-  const styleText = doc.querySelector('style')?.textContent ?? ''
+  // Read the global rules back out of whichever <style> tag carries them; a
+  // document that has been through the inliner may have several.
+  const styleText = [...doc.querySelectorAll('style')].map((el) => el.textContent ?? '').join('\n')
   if (styleText) {
     const fontM = /body\s*\{[^}]*font-family:\s*([^;}]+)/i.exec(styleText)
     if (fontM) fontFamily = fontM[1].trim()
@@ -87,5 +89,6 @@ function extractSettings(doc: Document, content: HTMLElement): EmailDocSettings 
     fontFamily,
     textColor,
     linkColor,
+    containerRadius: px(content.style.borderRadius, DEFAULT_SETTINGS.containerRadius),
   }
 }
