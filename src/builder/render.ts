@@ -1,4 +1,4 @@
-import { type EmailDoc, DEFAULT_FONT } from './model'
+import { type EmailDoc, DEFAULT_FONT, DEFAULT_SETTINGS } from './model'
 import { makeRenderCtx, renderBlock } from './blocks'
 import { esc } from './htmlUtils'
 
@@ -87,7 +87,9 @@ function safeCssValue(value: string): string {
 export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   const markers = opts.markers ?? false
   const canvas = opts.canvas ?? false
-  const { settings } = doc
+  // Merge over the defaults so a doc saved before a setting existed still
+  // renders with a value rather than "undefinedpx".
+  const settings = { ...DEFAULT_SETTINGS, ...(doc.settings ?? {}) }
   const ctx = makeRenderCtx(markers, settings.contentWidth)
   const rows = doc.blocks.map((block) => renderBlock(block, ctx)).join('\n')
   const preheader =
@@ -105,6 +107,8 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
   const globalStyles = `a { color: ${safeLinkColor}; } body { color: ${safeTextColor}; font-family: ${safeFontFamily}; }`
   const bodyBg = settings.bodyBg ?? '#f4f8fc'
   const containerBg = settings.containerBg ?? '#ffffff'
+  const radius = Math.max(0, Number(settings.containerRadius) || 0)
+  const radiusStyle = radius > 0 ? `border-radius:${radius}px;overflow:hidden;` : ''
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -122,7 +126,7 @@ export function renderEmail(doc: EmailDoc, opts: RenderOptions = {}): string {
 ${canvasStyle}${preheader}  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${bodyBg}" class="et-outer" style="background-color:${bodyBg};">
     <tr>
       <td align="center" class="et-outer-td" style="padding:24px 12px;">
-        <table role="presentation" width="${settings.contentWidth}" cellpadding="0" cellspacing="0" border="0" class="et-content" style="width:${settings.contentWidth}px;max-width:${settings.contentWidth}px;background-color:${containerBg};border-radius:10px;overflow:hidden;">
+        <table role="presentation" width="${settings.contentWidth}" cellpadding="0" cellspacing="0" border="0" class="et-content" style="width:${settings.contentWidth}px;max-width:${settings.contentWidth}px;background-color:${containerBg};${radiusStyle}">
 ${rows}
         </table>
       </td>

@@ -1,6 +1,6 @@
 import type { ButtonProps } from '../model'
 import { DEFAULT_FONT } from '../model'
-import { normalizeColor, paddingY, px, styleOf, alignOf } from '../htmlUtils'
+import { alignOf, normalizeColor, normalizeFontStack, paddingBottom, paddingTop, paddingX, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef } from './types'
 
@@ -22,7 +22,8 @@ export const buttonDef: BlockDef = {
     { key: 'fontSize', label: 'Font size', type: 'range', min: 12, max: 24, step: 1, unit: 'px' },
     FONT_FIELD,
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
-    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingTop', label: 'Top padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingBottom', label: 'Bottom padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     ...COMMON_FIELDS,
   ],
@@ -38,17 +39,20 @@ export const buttonDef: BlockDef = {
     fontSize: 16,
     fontFamily: DEFAULT_FONT,
     align: 'center',
-    paddingY: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
     paddingX: 24,
     ...COMMON_DEFAULTS,
   }),
   render: ({ props, id }: { props: ButtonProps; id: string }, ctx) => {
     const height = props.height
     const width = props.fullWidth ? ctx.contentWidth - props.paddingX * 2 : props.width
-    const arc = Math.min(100, Math.round((props.radius / height) * 100))
+    // VML has no border-radius: it takes the corner as a percentage of the
+    // shorter side, so a pill radius clamps to 50%.
+    const arc = Math.min(50, Math.round((props.radius / height) * 100))
     const widthStyle = props.fullWidth ? 'width:100%;' : `width:${props.width}px;`
     const tdStyle = outerTdStyle(
-      `padding:${props.paddingY}px ${props.paddingX}px;`,
+      `padding:${props.paddingTop}px ${props.paddingX}px ${props.paddingBottom}px;`,
       props,
       ctx.contentWidth,
     )
@@ -82,10 +86,11 @@ export const buttonDef: BlockDef = {
       width: fullWidth ? 200 : px(st.width, 200),
       height: lineH,
       fontSize: px(st.fontSize, 16),
-      fontFamily: st.fontFamily || DEFAULT_FONT,
+      fontFamily: normalizeFontStack(st.fontFamily, DEFAULT_FONT),
       align: alignOf(td, 'center') as ButtonProps['align'],
-      paddingY: paddingY(tdSt.padding, 12),
-      paddingX: px(tdSt.paddingLeft, 24),
+      paddingTop: paddingTop(tdSt.padding, 12),
+      paddingBottom: paddingBottom(tdSt.padding, 12),
+      paddingX: px(tdSt.paddingLeft, 0) || paddingX(tdSt.padding, 24),
       blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,

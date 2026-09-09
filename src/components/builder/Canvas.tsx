@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, useDraggable, useSensor, useSensors, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from '@dnd-kit/core'
-import { GripVertical, Copy, Trash2 } from 'lucide-react'
+import { GripVertical, Copy, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { renderEmail } from '../../builder/render'
 import { type EmailDoc, type BlockType, findBlock } from '../../builder/model'
 import { REGISTRY } from '../../builder/blocks'
@@ -144,6 +144,7 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
   const doc = useEditor((s) => s.doc)
   const selectedId = useEditor((s) => s.selectedId)
   const duplicateBlock = useEditor((s) => s.duplicateBlock)
+  const nudgeBlock = useEditor((s) => s.nudgeBlock)
   const removeBlock = useEditor((s) => s.removeBlock)
   const insertBlock = useEditor((s) => s.insertBlock)
   const [zoom, setZoom] = useState(1)
@@ -568,10 +569,31 @@ export function Canvas({ onSelect, onDrop }: CanvasProps) {
                   return (
                     <div
                       className="absolute z-20 flex items-center gap-0.5 rounded-lg border border-ice-200 bg-white p-0.5 shadow-md"
-                      style={{ top: Math.max(4, r.top - 36), left: Math.max(4, r.left + r.width - 68), pointerEvents: 'auto' }}
+                      style={{ top: Math.max(4, r.top - 36), left: Math.max(4, r.left + r.width - 136), pointerEvents: 'auto' }}
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
+                      role="toolbar"
+                      aria-label="Block actions"
                     >
+                      <button
+                        type="button"
+                        title="Move up"
+                        aria-label="Move block up"
+                        onClick={() => nudgeBlock(selectedId, -1)}
+                        className="rounded p-1.5 text-ink-500 hover:bg-ice-50 hover:text-ink-900"
+                      >
+                        <ChevronUp className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Move down"
+                        aria-label="Move block down"
+                        onClick={() => nudgeBlock(selectedId, 1)}
+                        className="rounded p-1.5 text-ink-500 hover:bg-ice-50 hover:text-ink-900"
+                      >
+                        <ChevronDown className="size-3.5" />
+                      </button>
+                      <div className="h-4 w-px bg-ice-200" />
                       <button
                         type="button"
                         title="Duplicate"

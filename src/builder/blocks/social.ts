@@ -1,6 +1,6 @@
 import type { SocialProps, SocialLink } from '../model'
 import { DEFAULT_FONT } from '../model'
-import { normalizeColor, numAttr, paddingY, px, styleOf } from '../htmlUtils'
+import { normalizeColor, normalizeFontStack, numAttr, paddingBottom, paddingTop, paddingX, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import { childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, ALIGN_OPTIONS, type BlockDef } from './types'
 
@@ -123,7 +123,8 @@ export const socialDef: BlockDef = {
     { key: 'color', label: 'Label colour', type: 'color' },
     { key: 'fontSize', label: 'Label font size', type: 'range', min: 10, max: 18, step: 1, unit: 'px' },
     { key: 'fontFamily', label: 'Font', type: 'font' },
-    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingTop', label: 'Top padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingBottom', label: 'Bottom padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     ...COMMON_FIELDS,
   ],
@@ -141,7 +142,8 @@ export const socialDef: BlockDef = {
     color: '#5c7793',
     fontSize: 13,
     fontFamily: DEFAULT_FONT,
-    paddingY: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     paddingX: 24,
     ...COMMON_DEFAULTS,
   }),
@@ -172,7 +174,7 @@ export const socialDef: BlockDef = {
       content = items.map((item) => `<div style="margin:4px 0;text-align:${tdAlign};">${item}</div>`).join('\n')
     }
 
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
+    const tdStyle = outerTdStyle(`padding:${props.paddingTop}px ${props.paddingX}px ${props.paddingBottom}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-social" align="${tdAlign}" style="${tdStyle}">
 ${content}
@@ -230,9 +232,10 @@ ${content}
       iconColor: svgSt ? normalizeColor(svgSt.color || '#2b7fe0') : '#2b7fe0',
       color: labelSt ? normalizeColor(labelSt.color || '#5c7793') : '#5c7793',
       fontSize: labelSt ? px(labelSt.fontSize, 13) : 13,
-      fontFamily: (labelSt?.fontFamily) || DEFAULT_FONT,
-      paddingY: paddingY(tdSt.padding, 16),
-      paddingX: px(tdSt.paddingLeft, 24),
+      fontFamily: normalizeFontStack(labelSt?.fontFamily, DEFAULT_FONT),
+      paddingTop: paddingTop(tdSt.padding, 16),
+      paddingBottom: paddingBottom(tdSt.padding, 16),
+      paddingX: px(tdSt.paddingLeft, 0) || paddingX(tdSt.padding, 24),
       blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,

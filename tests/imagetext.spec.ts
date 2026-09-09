@@ -16,6 +16,7 @@ function imgTextDoc(imagePosition: ImageTextProps['imagePosition']): EmailDoc {
       fontFamily: DEFAULT_FONT,
       textColor: '#333333',
       linkColor: DEFAULT_LINK_COLOR,
+      containerRadius: 10,
     },
     blocks: [
       {
@@ -31,9 +32,12 @@ function imgTextDoc(imagePosition: ImageTextProps['imagePosition']): EmailDoc {
           fontFamily: DEFAULT_FONT,
           color: '#333333',
           linkColor: DEFAULT_LINK_COLOR,
+          linkUnderline: true,
+          imgRadius: 0,
           imagePosition,
           gap: 16,
-          paddingY: 16,
+          paddingTop: 16,
+          paddingBottom: 16,
           paddingX: 24,
           fadeBottom: false,
           blockBg: 'transparent',

@@ -1,5 +1,5 @@
 import type { ImageProps } from '../model'
-import { alignOf, numAttr, paddingY, px, styleOf } from '../htmlUtils'
+import { alignOf, numAttr, paddingBottom, paddingTop, paddingX, px, styleOf } from '../htmlUtils'
 import { esc } from '../htmlUtils'
 import {
   ALIGN_OPTIONS,
@@ -24,8 +24,10 @@ export const imageDef: BlockDef = {
     { key: 'width', label: 'Width', type: 'range', min: 20, max: 680, step: 4, unit: 'px' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
     { key: 'link', label: 'Link URL', type: 'url', placeholder: 'https://… (optional)' },
+    { key: 'radius', label: 'Image radius', type: 'range', min: 0, max: 40, step: 2, unit: 'px' },
     { key: 'fadeBottom', label: 'Fade bottom edge', type: 'toggle', help: 'Fade the image to transparent at the bottom' },
-    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingTop', label: 'Top padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingBottom', label: 'Bottom padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     ...COMMON_FIELDS,
   ],
@@ -35,7 +37,9 @@ export const imageDef: BlockDef = {
     width: 552,
     align: 'center',
     link: '',
-    paddingY: 8,
+    radius: 0,
+    paddingTop: 8,
+    paddingBottom: 8,
     paddingX: 0,
     fadeBottom: false,
     ...COMMON_DEFAULTS,
@@ -43,12 +47,13 @@ export const imageDef: BlockDef = {
   render: ({ props, id }: { props: ImageProps; id: string }, ctx) => {
     const margin =
       props.align === 'center' ? 'margin:0 auto;' : props.align === 'right' ? 'margin:0 0 0 auto;' : ''
+    const radius = props.radius > 0 ? `border-radius:${props.radius}px;` : ''
     const img =
       props.src === ''
         ? `<div class="et-img-placeholder" style="background-color:#e7eef6;border:1px dashed #b3cbe8;border-radius:6px;color:#5c7793;font-family:Arial;font-size:13px;padding:28px 12px;text-align:center;">Image placeholder — set an image URL</div>`
-        : `<img src="${esc(props.src)}" alt="${esc(props.alt)}" width="${props.width}" class="et-img${props.fadeBottom ? ` ${FADE_BOTTOM_CLASS}` : ''}" style="display:block;${margin}width:${props.width}px;max-width:100%;height:auto;border:0;${props.fadeBottom ? FADE_BOTTOM_MASK_CSS : ''}">`
+        : `<img src="${esc(props.src)}" alt="${esc(props.alt)}" width="${props.width}" class="et-img${props.fadeBottom ? ` ${FADE_BOTTOM_CLASS}` : ''}" style="display:block;${margin}width:${props.width}px;max-width:100%;height:auto;border:0;${radius}${props.fadeBottom ? FADE_BOTTOM_MASK_CSS : ''}">`
     const wrapped = props.link !== '' ? `<a href="${esc(props.link)}">${img}</a>` : img
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
+    const tdStyle = outerTdStyle(`padding:${props.paddingTop}px ${props.paddingX}px ${props.paddingBottom}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-image" align="${props.align}" style="${tdStyle}">${wrapped}</td>
 </tr>`
@@ -71,9 +76,11 @@ export const imageDef: BlockDef = {
       width: img ? numAttr(img, 'width', 552) : 552,
       align: alignOf(td, 'center') as ImageProps['align'],
       link,
+      radius: img ? px(styleOf(img).borderRadius, 0) : 0,
       fadeBottom: img?.classList.contains(FADE_BOTTOM_CLASS) ?? false,
-      paddingY: paddingY(st.padding, 8),
-      paddingX: px(st.paddingLeft, 0),
+      paddingTop: paddingTop(st.padding, 8),
+      paddingBottom: paddingBottom(st.padding, 8),
+      paddingX: px(st.paddingLeft, 0) || paddingX(st.padding, 0),
       blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,

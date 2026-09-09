@@ -78,3 +78,22 @@ describe('parseRichContent', () => {
     expect(parseRichContent(container('plain <strong>text</strong>'))).toBe('plain **text**')
   })
 })
+
+describe('renderRich link targets', () => {
+  it('links mailto: addresses', () => {
+    expect(renderRich('[Email us](mailto:hi@example.com)', '#2b7fe0')).toContain('<a href="mailto:hi@example.com"')
+  })
+
+  it('links merge tags, so an unsubscribe URL can be substituted at send time', () => {
+    expect(renderRich('[Unsubscribe]({{unsubscribe_url}})', '#2b7fe0')).toContain('<a href="{{unsubscribe_url}}"')
+  })
+
+  it('leaves a bare bracket pair that is not a link alone', () => {
+    expect(renderRich('[not a link](javascript:alert(1))', '#2b7fe0')).not.toContain('<a ')
+  })
+
+  it('round-trips a merge-tag link back to its source markup', () => {
+    const html = renderRich('[Unsubscribe]({{unsubscribe_url}})', '#2b7fe0')
+    expect(parseRichContent(container(html))).toBe('[Unsubscribe]({{unsubscribe_url}})')
+  })
+})

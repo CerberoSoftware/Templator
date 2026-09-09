@@ -3,6 +3,7 @@ import { uid } from '../model'
 import { headerDef } from './header'
 import { headingDef } from './heading'
 import { textDef } from './text'
+import { calloutDef } from './callout'
 import { imageDef } from './image'
 import { buttonDef } from './button'
 import { spacerDef } from './spacer'
@@ -21,6 +22,7 @@ export const REGISTRY: Record<BlockType, BlockDef> = {
   header: headerDef,
   heading: headingDef,
   text: textDef,
+  callout: calloutDef,
   image: imageDef,
   button: buttonDef,
   spacer: spacerDef,
@@ -36,6 +38,7 @@ export const REGISTRY_ORDER: BlockDef[] = [
   headerDef,
   headingDef,
   textDef,
+  calloutDef,
   imageDef,
   buttonDef,
   spacerDef,
@@ -68,6 +71,7 @@ export function makeRenderCtx(markers: boolean, contentWidth: number): RenderCtx
 
 export function renderBlock(block: Block, ctx: RenderCtx): string {
   const def = REGISTRY[block.type]
+  if (!def) return ''
   return def.render(block, ctx)
 }
 

@@ -40,6 +40,21 @@ export function cleanLegacy(input: string): LegacyCleanResult {
   const httpImgs = [...dom.querySelectorAll('img')].filter((i) => (i.getAttribute('src') ?? '').toLowerCase().startsWith('http://'))
   if (httpImgs.length > 0) warnings.push(`${httpImgs.length} image(s) use insecure http:// URLs — re-upload via the asset manager before sending`)
 
+  // Embedded base64 images can each be tens to hundreds of KB. Left in place
+  // they get duplicated into both the block doc and the rendered body when the
+  // template is saved, which can push the stored value past the column's size
+  // limit. Strip them here — at import time, with a clear warning — rather
+  // than letting the user hit an opaque size error on Save.
+  const dataImgs = [...dom.querySelectorAll('img')].filter((i) =>
+    (i.getAttribute('src') ?? '').trim().toLowerCase().startsWith('data:'),
+  )
+  if (dataImgs.length > 0) {
+    dataImgs.forEach((i) => i.removeAttribute('src'))
+    warnings.push(
+      `${dataImgs.length} embedded (base64) image(s) removed — they make the template too large to save. Re-upload via the asset manager and set the image URL instead.`,
+    )
+  }
+
   const noAlt = [...dom.querySelectorAll('img')].filter((i) => !(i.getAttribute('alt') ?? '').trim())
   if (noAlt.length > 0) {
     noAlt.forEach((i) => i.setAttribute('alt', ''))

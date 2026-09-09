@@ -4,7 +4,7 @@ import { normalizeColor } from '../htmlUtils'
 export interface FieldDef {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'number' | 'range' | 'color' | 'select' | 'toggle' | 'font' | 'url' | 'social-links'
+  type: 'text' | 'textarea' | 'code' | 'number' | 'range' | 'color' | 'select' | 'toggle' | 'font' | 'url' | 'social-links'
   min?: number
   max?: number
   step?: number

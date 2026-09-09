@@ -18,7 +18,7 @@ export function renderInlineMarkup(escaped: string, linkColor: string, linkUnder
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/__([^_]+)__/g, '<u>$1</u>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, text: string, href: string) => {
+    .replace(/\[([^\]]+)\]\(((?:https?:\/\/|mailto:|\{\{)[^)\s]+)\)/g, (_m, text: string, href: string) => {
       return `<a href="${href}" class="et-link" style="color:${linkColor};text-decoration:${linkUnderline ? 'underline' : 'none'};">${text}</a>`
     })
 }
@@ -227,6 +227,26 @@ export function normalizeColor(value: string): string {
   return value.trim()
 }
 
+/**
+ * Canonicalise a font stack.
+ *
+ * The browser's CSSOM rewrites quoting when a stack round-trips through an
+ * element's style (`'Plus Jakarta Sans'` comes back as `"Plus Jakarta Sans"`),
+ * which would make every parse of an unchanged document report a change. Quote
+ * only the families that need it, always the same way, so render -> parse ->
+ * render is a fixed point.
+ */
+export function normalizeFontStack(value: string | null | undefined, fallback: string): string {
+  const raw = (value ?? '').trim()
+  if (raw === '') return fallback
+  const families = raw
+    .split(',')
+    .map((part) => part.trim().replace(/^["']|["']$/g, '').trim())
+    .filter(Boolean)
+    .map((name) => (/\s/.test(name) ? `'${name}'` : name))
+  return families.length > 0 ? families.join(', ') : fallback
+}
+
 export function firstLinkColor(container: Element, fallback: string): string {
   const a = container.querySelector('a.et-link') as HTMLElement | null
   if (a) {
@@ -255,6 +275,30 @@ export function paddingY(styleValue: string | null | undefined, fallback: number
   if (styleValue == null || styleValue === '') return fallback
   const first = styleValue.split(' ')[0]
   return px(first, fallback)
+}
+
+/** Read the top component of a CSS padding shorthand value. */
+export function paddingTop(styleValue: string | null | undefined, fallback: number): number {
+  if (styleValue == null || styleValue === '') return fallback
+  return px(styleValue.trim().split(/\s+/)[0], fallback)
+}
+
+/**
+ * Read the bottom component of a CSS padding shorthand value.
+ * A two-value shorthand (`8px 24px`) repeats the top value at the bottom, so
+ * only a three- or four-value shorthand carries a bottom of its own.
+ */
+export function paddingBottom(styleValue: string | null | undefined, fallback: number): number {
+  if (styleValue == null || styleValue === '') return fallback
+  const parts = styleValue.trim().split(/\s+/)
+  return px(parts.length >= 3 ? parts[2] : parts[0], fallback)
+}
+
+/** Read the horizontal (left/right) component of a CSS padding shorthand value. */
+export function paddingX(styleValue: string | null | undefined, fallback: number): number {
+  if (styleValue == null || styleValue === '') return fallback
+  const parts = styleValue.trim().split(/\s+/)
+  return px(parts.length >= 2 ? parts[1] : parts[0], fallback)
 }
 
 export function numAttr(el: Element, name: string, fallback: number): number {

@@ -238,6 +238,24 @@ describe('legacy import edge cases', () => {
     expect(parsed).toBeNull()
   })
 
+  it('strips embedded base64 images, which are too large to store', () => {
+    const dataUri =
+      'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+    const result = cleanLegacy(
+      `<!DOCTYPE html><html><body><table><tr><td><img src="${dataUri}" alt="Inline"></td></tr></table></body></html>`,
+    )
+    expect(result.html).not.toContain('base64')
+    expect(result.warnings.some((w) => w.includes('embedded (base64) image'))).toBe(true)
+  })
+
+  it('keeps hosted image URLs', () => {
+    const result = cleanLegacy(
+      '<!DOCTYPE html><html><body><table><tr><td><img src="https://example.com/a.png" alt="A"></td></tr></table></body></html>',
+    )
+    expect(result.html).toContain('https://example.com/a.png')
+    expect(result.warnings.some((w) => w.includes('embedded (base64) image'))).toBe(false)
+  })
+
   it('adds empty alt attributes to images', () => {
     const html = NEWSLETTER.replace('alt="Sale banner"', '')
     const result = cleanLegacy(html)

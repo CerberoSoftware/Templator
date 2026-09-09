@@ -1,6 +1,6 @@
 import type { HeadingProps } from '../model'
 import { DEFAULT_FONT, HEADING_SIZES } from '../model'
-import { alignOf, normalizeColor, paddingY, px, styleOf } from '../htmlUtils'
+import { alignOf, normalizeColor, normalizeFontStack, paddingBottom, paddingTop, paddingX, px, styleOf } from '../htmlUtils'
 import { ALIGN_OPTIONS, childTd, marker, COMMON_FIELDS, COMMON_DEFAULTS, outerTdStyle, parseBlockBg, type BlockDef } from './types'
 import { esc } from '../htmlUtils'
 
@@ -18,7 +18,8 @@ export const headingDef: BlockDef = {
     { key: 'fontFamily', label: 'Font', type: 'font' },
     { key: 'color', label: 'Text color', type: 'color' },
     { key: 'align', label: 'Alignment', type: 'select', options: ALIGN_OPTIONS },
-    { key: 'paddingY', label: 'Vertical padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingTop', label: 'Top padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
+    { key: 'paddingBottom', label: 'Bottom padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     { key: 'paddingX', label: 'Horizontal padding', type: 'range', min: 0, max: 64, step: 2, unit: 'px' },
     ...COMMON_FIELDS,
   ],
@@ -28,15 +29,19 @@ export const headingDef: BlockDef = {
     color: '#0f2540',
     align: 'left',
     fontFamily: DEFAULT_FONT,
-    paddingY: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
     paddingX: 24,
     ...COMMON_DEFAULTS,
   }),
   render: ({ props, id }: { props: HeadingProps; id: string }, ctx) => {
-    const tdStyle = outerTdStyle(`padding:${props.paddingY}px ${props.paddingX}px;`, props, ctx.contentWidth)
+    // A <select> hands back its value as a string, and imported HTML can carry
+    // any heading level, so normalise before indexing HEADING_SIZES.
+    const level = (Number(props.level) || 2) as 1 | 2 | 3
+    const tdStyle = outerTdStyle(`padding:${props.paddingTop}px ${props.paddingX}px ${props.paddingBottom}px;`, props, ctx.contentWidth)
     return `<tr${marker(id, ctx)}>
   <td class="et-heading" style="${tdStyle}">
-    <h${props.level} class="et-h" style="margin:0;font-family:${props.fontFamily};font-size:${HEADING_SIZES[props.level]}px;line-height:1.3;color:${props.color};text-align:${props.align};">${esc(props.text)}</h${props.level}>
+    <h${level} class="et-h" style="margin:0;font-family:${props.fontFamily};font-size:${HEADING_SIZES[level] ?? 22}px;line-height:1.3;color:${props.color};text-align:${props.align};">${esc(props.text)}</h${level}>
   </td>
 </tr>`
   },
@@ -56,9 +61,10 @@ export const headingDef: BlockDef = {
       level,
       color: normalizeColor(st.color || '#0f2540'),
       align: alignOf(heading, 'left') as HeadingProps['align'],
-      fontFamily: st.fontFamily || DEFAULT_FONT,
-      paddingY: paddingY(tdSt.padding, 12),
-      paddingX: px(tdSt.paddingLeft, 24),
+      fontFamily: normalizeFontStack(st.fontFamily, DEFAULT_FONT),
+      paddingTop: paddingTop(tdSt.padding, 12),
+      paddingBottom: paddingBottom(tdSt.padding, 12),
+      paddingX: px(tdSt.paddingLeft, 0) || paddingX(tdSt.padding, 24),
       blockBg: parseBlockBg(td),
       blockRadius: 0,
       widthPct: 100,
