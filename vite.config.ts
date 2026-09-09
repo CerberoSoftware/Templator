@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   publicDir: false,
-  base: '/static/',
+  base: process.env.VITE_BASE ?? '/static/',
   build: {
     outDir: 'public/static',
     assetsDir: '',
@@ -28,9 +28,12 @@ export default defineConfig({
     },
   },
   server: {
+    watch: {
+      usePolling: process.env.VITE_WATCH_POLLING === '1',
+    },
     proxy: {
-      '/api': 'http://localhost:8181',
-      '/uploads': 'http://localhost:8181',
+      '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8181',
+      '/uploads': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8181',
     },
   },
   test: {
