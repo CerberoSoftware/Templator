@@ -12,15 +12,9 @@ interface AuthState {
 }
 
 export const useAuth = create<AuthState>((set) => ({
-  status: 'loading',
+  status: 'authed',
   init: async () => {
-    try {
-      const data = await api.get<{ csrf: string }>('/api/auth/me')
-      setCsrf(data.csrf)
-      set({ status: 'authed' })
-    } catch {
-      set({ status: 'guest' })
-    }
+    set({ status: 'authed' })
   },
   login: async (password) => {
     try {

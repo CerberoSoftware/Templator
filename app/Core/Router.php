@@ -36,18 +36,19 @@ final class Router
             return;
         }
 
-        Auth::start();
+        $method = $this->currentMethod();
+
+        // Read-only public mode: all mutations are rejected
+        if ($method !== 'GET') {
+            Response::error(403, 'This demo is read-only — changes cannot be saved.', 'read_only');
+        }
 
         foreach ($this->routes as $route) {
-            if ($route['method'] !== $this->currentMethod()) {
+            if ($route['method'] !== $method) {
                 continue;
             }
             if (!preg_match($route['regex'], $path, $matches)) {
                 continue;
-            }
-            if (!$route['public']) {
-                Auth::requireUser();
-                Auth::requireCsrf($this->currentMethod());
             }
             array_shift($matches);
             $params = $route['params'] !== [] ? array_combine($route['params'], $matches) : [];

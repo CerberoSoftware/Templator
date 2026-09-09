@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Snowflake } from 'lucide-react'
 import { usePath } from './router'
 import { useAuth } from './stores/auth'
-import Login from './pages/Login'
 
 const TemplateList = lazy(() => import('./pages/TemplateList'))
 const EditorPage = lazy(() => import('./pages/EditorPage'))
@@ -24,10 +23,6 @@ export default function App() {
         <span className="text-sm font-medium">Loading eTemplator…</span>
       </div>
     )
-  }
-
-  if (status === 'guest') {
-    return <Login />
   }
 
   if (path === '/' || path === '/templates') {

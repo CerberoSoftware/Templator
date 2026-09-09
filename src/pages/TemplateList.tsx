@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { FilePlus2, KeyRound, Lock, LogOut, Pencil, Palette, Rocket, RotateCcw, Snowflake, Trash2, Unlock, XCircle, Zap } from 'lucide-react'
+import { FilePlus2, Lock, Pencil, Palette, Rocket, RotateCcw, Snowflake, Trash2, Unlock, XCircle, Zap } from 'lucide-react'
 import { api } from '../api/client'
 import { formatDateTime } from '../lib/utils'
 import { navigate } from '../router'
-import { useAuth } from '../stores/auth'
 import { QuickstartTab } from '../components/QuickstartTab'
 import { TemplatePreview } from '../components/TemplatePreview'
 import { migrateDoc, type EmailDoc } from '../builder/model'
@@ -86,8 +85,6 @@ function TemplateThumbnail({ id, name }: { id: number; name: string }) {
 }
 
 export default function TemplateList() {
-  const logout = useAuth((s) => s.logout)
-  const changePassword = useAuth((s) => s.changePassword)
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [trashed, setTrashed] = useState<TrashedTemplateRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -95,10 +92,6 @@ export default function TemplateList() {
   const [renaming, setRenaming] = useState<TemplateRow | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [tab, setTab] = useState<Tab>('my-templates')
-  const [showChangePw, setShowChangePw] = useState(false)
-  const [pwCurrent, setPwCurrent] = useState('')
-  const [pwNext, setPwNext] = useState('')
-  const [pwError, setPwError] = useState<string | null>(null)
   const [addingToQuickstart, setAddingToQuickstart] = useState<TemplateRow | null>(null)
   const [qsCategory, setQsCategory] = useState('Custom')
   const [qsDescription, setQsDescription] = useState('')
@@ -213,13 +206,6 @@ export default function TemplateList() {
     }
   }
 
-  const handleChangePw = async () => {
-    const err = await changePassword(pwCurrent, pwNext)
-    if (err) { setPwError(err); return }
-    setShowChangePw(false)
-    setPwCurrent(''); setPwNext(''); setPwError(null)
-  }
-
   return (
     <div className="h-full overflow-auto">
       <header className="sticky top-0 z-10 border-b border-ice-200 bg-white/85 backdrop-blur">
@@ -237,20 +223,7 @@ export default function TemplateList() {
               <Palette className="size-4" />
               Brand colours
             </button>
-            <button
-              onClick={() => setShowChangePw(true)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ice-100 hover:text-ink-900"
-            >
-              <KeyRound className="size-4" />
-              Change password
-            </button>
-            <button
-              onClick={() => void logout()}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ice-100 hover:text-ink-900"
-            >
-              <LogOut className="size-4" />
-              Sign out
-            </button>
+
           </div>
         </div>
       </header>
@@ -454,31 +427,6 @@ export default function TemplateList() {
           </>
         )}
       </main>
-
-      {showChangePw && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-base font-semibold">Change password</h2>
-            {pwError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{pwError}</p>}
-            <label className="mb-1 block text-xs font-medium text-ink-600">Current password</label>
-            <input type="password" value={pwCurrent} onChange={e => setPwCurrent(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-ice-200 px-3 py-2 text-sm outline-none focus:border-primary" />
-            <label className="mb-1 block text-xs font-medium text-ink-600">New password</label>
-            <input type="password" value={pwNext} onChange={e => setPwNext(e.target.value)}
-              className="mb-5 w-full rounded-lg border border-ice-200 px-3 py-2 text-sm outline-none focus:border-primary" />
-            <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowChangePw(false); setPwError(null) }}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ice-100">
-                Cancel
-              </button>
-              <button onClick={() => void handleChangePw()}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
-                Update
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {addingToQuickstart && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
